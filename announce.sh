@@ -2,67 +2,39 @@
 
 # TTS Announcement Script using Piper
 # Usage: ./announce.sh "Your message here" [voice]
-# Example: ./announce.sh "Task completed" "lessac"
+# Example: ./announce.sh "Task completed" lessac
 
 MESSAGE="${1:-Task completed}"
-VOICE="${2:-ryan}"  # Default to ryan-high voice (US male, high quality)
+VOICE="${2:-samuel}"
 
-# Available piper voice options:
-# lessac     - US English female (natural, clear)
-# ljspeech   - US English female (medium quality)
-# libritts   - US English (high quality, slower)
-# amy        - US English female (medium quality)
-# alan       - UK English male (medium quality)
-# ryan       - US English male (high quality) - DEFAULT
-# samuel     - US English male (Ryan model, natural) - end-of-coding announcements
+# Available voices:
+# samuel  - en_US-ryan-medium (default; the installed Ryan model)
+# amy     - en_US-amy-medium
+# lessac  - en_US-lessac-medium
+# alan    - en_GB-alan-medium
 
-# Map voice names and numbers to model files
 VOICE_DIR="${HOME}/.local/share/piper/voices"
-
-# Playback tuning, overridden per-voice below. Models render at 22050 Hz.
 PLAY_RATE="22050"
-LENGTH_SCALE=""
 
-# Support numbered voices (1-6)
 case "$VOICE" in
-    "1"|"lessac"|"en-us")
-        MODEL_FILE="$VOICE_DIR/en_US-lessac-medium.onnx"
-        VOICE_NAME="lessac"
-        ;;
-    "2"|"ljspeech")
-        MODEL_FILE="$VOICE_DIR/en_US-ljspeech-medium.onnx"
-        VOICE_NAME="ljspeech"
-        ;;
-    "3"|"libritts")
-        MODEL_FILE="$VOICE_DIR/en_US-libritts-high.onnx"
-        VOICE_NAME="libritts"
-        ;;
-    "4"|"amy")
-        MODEL_FILE="$VOICE_DIR/en_US-amy-medium.onnx"
-        VOICE_NAME="amy"
-        ;;
-    "5"|"alan"|"en-uk")
-        MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"
-        VOICE_NAME="alan"
-        ;;
-    "6"|"samuel"|"sam")
-        # samuel.onnx IS the en_US-ryan-medium model, saved under that name. It is the file that
-        # exists on this machine; en_US-ryan-high has never been downloaded, and pointing here at
-        # a missing model is what drops Travis to the espeak robot.
+    "1"|"samuel"|"sam")
+        # samuel.onnx IS the en_US-ryan-medium model saved under this name.
+        # en_US-ryan-high has never been downloaded here; pointing at a missing
+        # model silently falls back to espeak (the robot voice).
         MODEL_FILE="$VOICE_DIR/samuel.onnx"
         VOICE_NAME="samuel"
         ;;
-    "7"|"ryan")
-        MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
-        VOICE_NAME="ryan"
+    "2"|"amy")
+        MODEL_FILE="$VOICE_DIR/en_US-amy-medium.onnx"
+        VOICE_NAME="amy"
         ;;
-    "daniel")
-        MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"  # piper fallback; macOS uses Daniel neural
-        VOICE_NAME="daniel"
+    "3"|"lessac")
+        MODEL_FILE="$VOICE_DIR/en_US-lessac-medium.onnx"
+        VOICE_NAME="lessac"
         ;;
-    "rocko")
-        MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"  # piper fallback; macOS uses Rocko neural
-        VOICE_NAME="rocko"
+    "4"|"alan")
+        MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"
+        VOICE_NAME="alan"
         ;;
     *)
         MODEL_FILE="$VOICE_DIR/samuel.onnx"
@@ -71,11 +43,9 @@ case "$VOICE" in
 esac
 
 # ── One voice at a time ──────────────────────────────────────────────────────
-# Every announcement can overlap (nag fires on its own timer). Two at once
-# COLLIDE — Travis cuts himself off mid-sentence. Held for the whole speaking
-# section, so a second announcement waits rather than talking over the first.
-# The lock lives on a file descriptor, so it is released automatically if the
-# process is killed — which is exactly what waiting-nag.sh's stop does.
+# Announcements can overlap (nag fires on its own timer). Two at once COLLIDE —
+# Travis cuts himself off mid-sentence. The lock is released automatically if
+# the process is killed, so waiting-nag.sh stop can always cut in-flight audio.
 LOCK_FILE="${TMPDIR:-/tmp}/travis-announce.lock"
 LOCK_WAIT="${ANNOUNCE_LOCK_WAIT:-120}"
 if command -v flock >/dev/null 2>&1 && exec 9>"$LOCK_FILE" 2>/dev/null; then
@@ -92,10 +62,8 @@ else
     PIPER_BIN="$(command -v piper 2>/dev/null || echo '')"
 fi
 
-# Last resort if the mapped model is missing.
-# Samuel is tried first because he is the voice everything here asks for.
-# The size and .json checks matter: truncated downloads are a few bytes long,
-# and piper accepts one and then renders silence.
+# Last resort: if the mapped model is missing, take the first model actually
+# present. Samuel tried first since everything defaults to him.
 if [ ! -s "$MODEL_FILE" ]; then
     for candidate in "$VOICE_DIR/samuel.onnx" "$VOICE_DIR"/*.onnx; do
         [ -f "$candidate" ] && [ -f "$candidate.json" ] || continue
@@ -110,9 +78,7 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     echo "Announcing ($VOICE_NAME): $MESSAGE"
     WAV="$(mktemp "${TMPDIR:-/tmp}/announce_speech.XXXXXX.wav")" || WAV="/tmp/announce_speech.wav"
     trap 'rm -f "$WAV"' EXIT
-    PIPER_ARGS=(--model "$MODEL_FILE" --output_file "$WAV")
-    [ -n "$LENGTH_SCALE" ] && PIPER_ARGS+=(--length_scale "$LENGTH_SCALE")
-    echo "$MESSAGE" | "$PIPER_BIN" "${PIPER_ARGS[@]}" 2>/dev/null
+    echo "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --output_file "$WAV" 2>/dev/null
     if [[ "$OSTYPE" == "darwin"* ]]; then
         afplay "$WAV" 2>/dev/null
     else

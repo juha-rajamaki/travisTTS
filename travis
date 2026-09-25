@@ -1,53 +1,25 @@
 #!/bin/bash
 
-# Travis Voice Announcement Script
-# Usage: ./travis [voice_number] "Your message here"
-# Example: ./travis 2 "Hello world"  (uses voice option 2)
-# Example: ./travis "Hello world"     (uses default voice)
+# Travis — voice entry point.
+# Usage: ./travis [voice_number] "message"
+#
+# Voices:
+#   1 = samuel  (en_US-ryan-medium — default)
+#   2 = amy     (en_US-amy-medium)
+#   3 = lessac  (en_US-lessac-medium)
+#   4 = alan    (en_GB-alan-medium)
 
-# Voice options for piper:
-# 1 = en_US-ryan-high (American English male, high quality - default)
-# 2 = en_US-amy-medium (American English female)
-# 3 = en_US-lessac-medium (American English male)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Check if first argument is a number (voice selection)
+VOICE_NAMES=(samuel amy lessac alan)
+
 if [[ "$1" =~ ^[0-9]+$ ]]; then
-    VOICE_NUM="$1"
+    idx=$(( $1 - 1 ))
+    VOICE="${VOICE_NAMES[$idx]:-samuel}"
     MESSAGE="${2:-Hello, I am Travis. Your code assistant.}"
 else
-    VOICE_NUM=1  # Default voice
+    VOICE="samuel"
     MESSAGE="${1:-Hello, I am Travis. Your code assistant.}"
 fi
 
-# Set piper path and voices directory based on OS
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    PIPER_CMD="/Users/borre/Library/Python/3.9/bin/piper"
-    PIPER_VOICES_DIR="/Users/borre/.local/share/piper/voices"
-else
-    PIPER_CMD="piper"
-    PIPER_VOICES_DIR="/home/borre/.local/share/piper/voices"
-fi
-
-# Map voice numbers to piper voices
-case "$VOICE_NUM" in
-    1) PIPER_VOICE="en_US-ryan-high" ;;
-    2) PIPER_VOICE="en_US-amy-medium" ;;
-    3) PIPER_VOICE="en_US-lessac-medium" ;;
-    *) PIPER_VOICE="en_US-ryan-high" ;;  # Default fallback
-esac
-
-if [[ -x "$PIPER_CMD" ]]; then
-    echo "$MESSAGE" | "$PIPER_CMD" --model "$PIPER_VOICES_DIR/${PIPER_VOICE}.onnx" --output_file /tmp/travis_speech.wav 2>/dev/null
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        afplay /tmp/travis_speech.wav 2>/dev/null
-    else
-        aplay -r 22050 -f S16_LE -t wav /tmp/travis_speech.wav 2>/dev/null
-    fi
-    rm -f /tmp/travis_speech.wav
-    echo "Travis (voice $VOICE_NUM - $PIPER_VOICE): $MESSAGE"
-elif command -v say &> /dev/null; then
-    say "$MESSAGE"
-    echo "Travis (say fallback): $MESSAGE"
-else
-    echo "Travis: $MESSAGE"
-fi
+"$SCRIPT_DIR/announce.sh" "$MESSAGE" "$VOICE"

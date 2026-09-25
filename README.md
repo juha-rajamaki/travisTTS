@@ -57,28 +57,26 @@ Travis uses Piper voices stored in `~/.local/share/piper/voices/`.
 
 | # | Name | Model file | Description |
 |---|------|-----------|-------------|
-| 1 | ryan | `en_US-ryan-high.onnx` | US English male, high quality (default in `travis`) |
+| 1 | **samuel** | `samuel.onnx` | US English male — `ryan-medium` saved as `samuel`. Default. **Used by all Claude Code hooks.** |
 | 2 | amy | `en_US-amy-medium.onnx` | US English female |
 | 3 | lessac | `en_US-lessac-medium.onnx` | US English female, natural |
-| 4 | ljspeech | `en_US-ljspeech-medium.onnx` | US English female |
-| 5 | alan | `en_GB-alan-medium.onnx` | UK English male |
-| 6 | **samuel** | `samuel.onnx` | US English male — the `ryan-medium` model saved as `samuel`. **Used by all Claude Code hooks.** |
-| 7 | libritts | `en_US-libritts-high.onnx` | US English, high quality, slower |
+| 4 | alan | `en_GB-alan-medium.onnx` | UK English male |
 
-> **Why samuel?** The `ryan-high` model may not be installed. The `samuel.onnx` file is the `ryan-medium` model saved under a stable name. All internal scripts use `samuel` to avoid accidentally pointing at a model that doesn't exist.
+> **Why samuel and not ryan?** The `ryan-high` model may not be installed. `samuel.onnx` is the `ryan-medium` model saved under a stable name — all internal scripts use it to avoid silently falling back to espeak.
 
 ### Usage examples
 
 ```bash
-# Default voice (ryan-high / voice 1)
+# Default voice (samuel / voice 1)
 ~/tools/travisTTS/travis "Hello, I finished the task."
 
 # Specific voice by number
 ~/tools/travisTTS/travis 2 "Hello in amy's voice."
+~/tools/travisTTS/travis 4 "Hello in alan's voice."
 
 # Specific voice by name (via announce.sh)
 ~/tools/travisTTS/announce.sh "Hello" samuel
-~/tools/travisTTS/announce.sh "Hello" amy
+~/tools/travisTTS/announce.sh "Hello" lessac
 ```
 
 ---
