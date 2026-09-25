@@ -4,21 +4,21 @@
 # Usage: ./travis [voice_number] "message"
 #
 # Voices:
-#   1 = samuel  (en_US-ryan-medium — default)
+#   1 = ryan    (en_US-ryan-medium — default)
 #   2 = amy     (en_US-amy-medium)
 #   3 = lessac  (en_US-lessac-medium)
 #   4 = alan    (en_GB-alan-medium)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-VOICE_NAMES=(samuel amy lessac alan)
+VOICE_NAMES=(ryan amy lessac alan)
 
 if [[ "$1" =~ ^[0-9]+$ ]]; then
     idx=$(( $1 - 1 ))
-    VOICE="${VOICE_NAMES[$idx]:-samuel}"
+    VOICE="${VOICE_NAMES[$idx]:-ryan}"
     MESSAGE="${2:-Hello, I am Travis. Your code assistant.}"
 else
-    VOICE="samuel"
+    VOICE="ryan"
     MESSAGE="${1:-Hello, I am Travis. Your code assistant.}"
 fi
 

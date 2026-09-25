@@ -24,30 +24,41 @@ Both use [Piper TTS](https://github.com/rhasspy/piper) for natural-sounding offl
    # and put it somewhere on your PATH (e.g. ~/.local/bin/piper)
    ```
 
-2. **Voice model** — download `samuel.onnx` (the Ryan medium model renamed):
+### Install (all platforms)
 
-   ```bash
-   mkdir -p ~/.local/share/piper/voices
-   cd ~/.local/share/piper/voices
-
-   # Download the en_US-ryan-medium model and save it as samuel.onnx
-   wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-medium/en_US-ryan-medium.onnx -O samuel.onnx
-   wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-medium/en_US-ryan-medium.onnx.json -O samuel.onnx.json
-   ```
-
-### Clone and install
+Run the one-liner — it clones the repo, installs Piper TTS, and downloads the default voice model automatically:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/juha-rajamaki/travisTTS/main/install.sh)"
 ```
 
-Or manually:
+Works on macOS, Linux, and Windows (WSL or Git Bash). Re-running it on an existing install just pulls the latest changes.
+
+#### Manual install
 
 ```bash
 mkdir -p ~/tools
-git clone git@github.com:juha-rajamaki/travisTTS.git ~/tools/travisTTS
+git clone https://github.com/juha-rajamaki/travisTTS.git ~/tools/travisTTS
 chmod +x ~/tools/travisTTS/*.sh ~/tools/travisTTS/travis
+# Then install piper and voices manually (see Prerequisites below)
 ```
+
+#### Prerequisites (only needed for manual installs)
+
+1. **Piper TTS**
+
+   ```bash
+   pip3 install --user piper-tts
+   ```
+
+2. **Default voice model** (ryan-medium):
+
+   ```bash
+   mkdir -p ~/.local/share/piper/voices
+   cd ~/.local/share/piper/voices
+   wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-medium/en_US-ryan-medium.onnx
+   wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-medium/en_US-ryan-medium.onnx.json
+   ```
 
 ---
 
@@ -57,12 +68,12 @@ Travis uses Piper voices stored in `~/.local/share/piper/voices/`.
 
 | # | Name | Model file | Description |
 |---|------|-----------|-------------|
-| 1 | **samuel** | `samuel.onnx` | US English male — `ryan-medium` saved as `samuel`. Default. **Used by all Claude Code hooks.** |
+| 1 | **ryan** | `en_US-ryan-medium.onnx` | US English male — Default. **Used by all Claude Code hooks.** |
 | 2 | amy | `en_US-amy-medium.onnx` | US English female |
 | 3 | lessac | `en_US-lessac-medium.onnx` | US English female, natural |
 | 4 | alan | `en_GB-alan-medium.onnx` | UK English male |
 
-> **Why samuel and not ryan?** The `ryan-high` model may not be installed. `samuel.onnx` is the `ryan-medium` model saved under a stable name — all internal scripts use it to avoid silently falling back to espeak.
+> `samuel` is kept as an alias for `ryan` for back-compatibility with older installs.
 
 ### Usage examples
 
@@ -75,7 +86,7 @@ Travis uses Piper voices stored in `~/.local/share/piper/voices/`.
 ~/tools/travisTTS/travis 4 "Hello in alan's voice."
 
 # Specific voice by name (via announce.sh)
-~/tools/travisTTS/announce.sh "Hello" samuel
+~/tools/travisTTS/announce.sh "Hello" ryan
 ~/tools/travisTTS/announce.sh "Hello" lessac
 ```
 
@@ -182,7 +193,7 @@ Speaks a message using Piper. Falls back to `say` (macOS) if Piper isn't availab
 Lower-level wrapper: uses a speaker lock (so announcements never overlap), unique WAV tmpfiles, and the full fallback chain (Piper → espeak → say → silent). Used internally by `waiting-nag.sh`.
 
 ```bash
-~/tools/travisTTS/announce.sh "Task complete." samuel
+~/tools/travisTTS/announce.sh "Task complete." ryan
 ~/tools/travisTTS/announce.sh "Task complete." amy
 ```
 
