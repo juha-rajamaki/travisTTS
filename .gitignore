@@ -1,0 +1,9 @@
+# Runtime state — never commit these
+.claude-announce-enabled
+.waiting-nag-enabled
+.waiting-nag.pid
+.waiting-nag.started
+.waiting-nag.log
+.waiting-nag.log.1
+.claude-announce-nag-pids
+/tmp/announce_speech.*.wav
