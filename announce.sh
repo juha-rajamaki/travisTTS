@@ -17,12 +17,9 @@ VOICE_DIR="${HOME}/.local/share/piper/voices"
 PLAY_RATE="22050"
 
 case "$VOICE" in
-    "1"|"samuel"|"sam")
-        # samuel.onnx IS the en_US-ryan-medium model saved under this name.
-        # en_US-ryan-high has never been downloaded here; pointing at a missing
-        # model silently falls back to espeak (the robot voice).
-        MODEL_FILE="$VOICE_DIR/samuel.onnx"
-        VOICE_NAME="samuel"
+    "1"|"samuel"|"sam"|"ryan")
+        MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
+        VOICE_NAME="en_US-ryan-high"
         ;;
     "2"|"amy")
         MODEL_FILE="$VOICE_DIR/en_US-amy-medium.onnx"
@@ -37,8 +34,8 @@ case "$VOICE" in
         VOICE_NAME="alan"
         ;;
     *)
-        MODEL_FILE="$VOICE_DIR/samuel.onnx"
-        VOICE_NAME="samuel"
+        MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
+        VOICE_NAME="en_US-ryan-high"
         ;;
 esac
 
@@ -67,7 +64,7 @@ fi
 if [ ! -s "$MODEL_FILE" ]; then
     for candidate in "$VOICE_DIR/samuel.onnx" "$VOICE_DIR"/*.onnx; do
         [ -f "$candidate" ] && [ -f "$candidate.json" ] || continue
-        [ "$(stat -c%s "$candidate" 2>/dev/null || echo 0)" -gt 1000000 ] || continue
+        [ "$(stat -f%z "$candidate" 2>/dev/null || stat -c%s "$candidate" 2>/dev/null || echo 0)" -gt 1000000 ] || continue
         MODEL_FILE="$candidate"
         VOICE_NAME="$(basename "$candidate" .onnx)"
         break
@@ -87,10 +84,10 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     rm -f "$WAV"
 elif command -v espeak &> /dev/null; then
     echo "Announcing (espeak fallback): $MESSAGE"
-    timeout 60 espeak "$MESSAGE" -s 140 -v en-us
+    espeak "$MESSAGE" -s 140 -v en-us
 elif command -v say &> /dev/null; then
     echo "Announcing (say fallback): $MESSAGE"
-    timeout 60 say "$MESSAGE"
+    say "$MESSAGE"
 else
     echo "TTS: $MESSAGE"
 fi
