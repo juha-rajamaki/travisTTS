@@ -128,6 +128,7 @@ Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.cl
 | `PostToolUse` | `waiting-nag.sh stop` | Keeps nagger silenced |
 | `Notification` | `waiting-nag.sh start` | Starts the idle nagger (Claude waiting for you) |
 | `Stop` | `stop-hook.sh` | Extracts `last_assistant_message` and speaks it |
+| `SubagentStop` (`code-security-auditor`) | `TRAVIS_VOICE=alan stop-hook.sh` | Speaks the security audit result in **alan's** voice, so security findings stand out from ryan (this repo's `.claude/settings.json`) |
 
 ---
 
