@@ -30,15 +30,15 @@
 #        CLAUDE_NAG_LOG_MAX    rotate once the log passes this many bytes (default 256k)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=travis-config.sh
+source "$SCRIPT_DIR/travis-config.sh"
+
 PID_FILE="$SCRIPT_DIR/.waiting-nag.pid"
 STATE_FILE="$SCRIPT_DIR/.waiting-nag-enabled"
 START_FILE="$SCRIPT_DIR/.waiting-nag.started"
 LOG_FILE="${CLAUDE_NAG_LOG:-$SCRIPT_DIR/.waiting-nag.log}"
 LOG_MAX_BYTES="${CLAUDE_NAG_LOG_MAX:-262144}"
-# "samuel" — the Piper en_US-ryan-medium model. NOT "ryan": announce.sh maps that to
-# en_US-ryan-high.onnx, which may not be downloaded. A missing model silently degrades
-# the whole thing to espeak — the tinny robot voice.
-VOICE="samuel"
+VOICE="${TRAVIS_VOICE:-ryan}"
 if [ -n "$CLAUDE_NAG_INTERVAL" ]; then
     NAG_INTERVALS="$CLAUDE_NAG_INTERVAL"
 else
@@ -46,7 +46,10 @@ else
 fi
 DEFAULT_MSG="Travis here — still waiting on you."
 
-is_off() { [ -f "$STATE_FILE" ] && [ "$(tr -d '[:space:]' < "$STATE_FILE")" = "off" ]; }
+is_off() {
+    [ "${TRAVIS_NAG:-on}" = "off" ] && return 0
+    [ -f "$STATE_FILE" ] && [ "$(tr -d '[:space:]' < "$STATE_FILE")" = "off" ]
+}
 
 log() {
     local size=0

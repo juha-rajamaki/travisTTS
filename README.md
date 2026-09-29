@@ -3,16 +3,14 @@
 Travis is a voice announcement system for [Claude Code](https://claude.ai/code) sessions. It gives you a running audio commentary of what Claude is doing:
 
 - **"On it."** — spoken the moment Claude starts working on your prompt
-- **Announce** — speaks Claude's actual response summary when a task finishes (extracted from the Stop hook JSON automatically — no CLAUDE.md instruction needed)
-- **Nag** — repeats a reminder at set intervals while Claude is idle, waiting for your input ("Travis here — still waiting on you.")
+- **Announce** — speaks Claude's response summary automatically when a task finishes (Stop hook)
+- **Nag** — repeats a reminder at set intervals while Claude is idle, waiting for your input
 
 All speech uses [Piper TTS](https://github.com/rhasspy/piper) for natural-sounding offline audio, with automatic fallback to `espeak` or macOS `say`.
 
 ---
 
 ## Installation
-
-Run the one-liner — it clones the repo, installs Piper TTS, and downloads the default voice model:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/juha-rajamaki/travisTTS/main/install.sh)"
@@ -26,74 +24,97 @@ Works on macOS, Linux, and Windows (WSL or Git Bash). Re-running on an existing 
 mkdir -p ~/tools
 git clone https://github.com/juha-rajamaki/travisTTS.git ~/tools/travisTTS
 chmod +x ~/tools/travisTTS/*.sh ~/tools/travisTTS/travis
-# Then install piper and voices manually (see Prerequisites below)
+pip3 install --user piper-tts
+mkdir -p ~/.local/share/piper/voices && cd ~/.local/share/piper/voices
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-high/en_US-ryan-high.onnx
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-high/en_US-ryan-high.onnx.json
 ```
-
-#### Prerequisites (manual installs only)
-
-1. **Piper TTS**
-   ```bash
-   pip3 install --user piper-tts
-   ```
-
-2. **Default voice model** (ryan-medium):
-   ```bash
-   mkdir -p ~/.local/share/piper/voices
-   cd ~/.local/share/piper/voices
-   wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-medium/en_US-ryan-medium.onnx
-   wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-medium/en_US-ryan-medium.onnx.json
-   ```
 
 ---
 
 ## Claude Code wiring
 
-Add these hooks to `~/.claude/settings.json` (global — works in every project automatically):
+Add these hooks to `~/.claude/settings.json` (global — works in every project automatically, no per-project setup needed):
 
 ```json
 {
   "hooks": {
     "Notification": [
-      {
-        "matcher": "",
-        "hooks": [{ "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh start" }]
-      }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh start" }] }
     ],
     "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" },
-          { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh arm" }
-        ]
-      }
+      { "matcher": "", "hooks": [
+        { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" },
+        { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh arm" }
+      ]}
     ],
     "PreToolUse": [
-      {
-        "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" },
-          { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh fire" }
-        ]
-      }
+      { "matcher": "", "hooks": [
+        { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" },
+        { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh fire" }
+      ]}
     ],
     "PostToolUse": [
-      {
-        "matcher": "",
-        "hooks": [{ "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" }]
-      }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" }] }
     ],
     "Stop": [
-      {
-        "matcher": "",
-        "hooks": [{ "type": "command", "command": "$HOME/tools/travisTTS/stop-hook.sh" }]
-      }
+      { "matcher": "", "hooks": [{ "type": "command", "command": "$HOME/tools/travisTTS/stop-hook.sh" }] }
     ]
   }
 }
 ```
 
-No `CLAUDE.md` instruction needed — the `Stop` hook reads Claude's last message directly and speaks it automatically.
+---
+
+## Per-project configuration
+
+Drop a `travis.env` file in your project's `.claude/` directory to override settings for that project. Copy from the template:
+
+```bash
+cp ~/tools/travisTTS/travis.env.example <your-project>/.claude/travis.env
+```
+
+**Config priority (highest wins):**
+1. Environment variables set in the shell (e.g. `TRAVIS_VOICE=amy ./some-script.sh`)
+2. `<project>/.claude/travis.env` — per-project overrides
+3. `~/.config/travis/travis.env` — your global defaults
+
+**Available settings:**
+
+```bash
+# Which features are active (on|off)
+TRAVIS_STOP_HOOK=on       # Speak Claude's last message when a task finishes
+TRAVIS_START_WORK=on      # Say "On it." when Claude starts working
+TRAVIS_NAG=on             # Repeat reminders while Claude is idle
+TRAVIS_ANNOUNCE=on        # Manual claude-announce.sh calls
+
+# Voice: ryan (default) | amy | alan
+TRAVIS_VOICE=ryan
+
+# How many characters of the Stop hook message to speak
+TRAVIS_STOP_MAX_CHARS=300
+
+# Nag schedule: space-separated seconds between reminders
+CLAUDE_NAG_INTERVALS="60 60 60 300 300 300"
+```
+
+---
+
+## Voice reference
+
+Run `voicemodels.sh` to hear each voice before choosing:
+
+```bash
+~/tools/travisTTS/voicemodels.sh
+```
+
+| # | Name | Model file | Description |
+|---|------|-----------|-------------|
+| 1 | **ryan** | `en_US-ryan-high.onnx` | US English male — Default |
+| 2 | amy | `en_US-amy-medium.onnx` | US English female |
+| 3 | alan | `en_GB-alan-medium.onnx` | UK English male |
+
+Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.claude/travis.env`.
 
 ---
 
@@ -110,82 +131,44 @@ No `CLAUDE.md` instruction needed — the `Stop` hook reads Claude's last messag
 
 ---
 
-## Voice reference
-
-Travis uses Piper voices stored in `~/.local/share/piper/voices/`.
-
-| # | Name | Model file | Description |
-|---|------|-----------|-------------|
-| 1 | **ryan** | `en_US-ryan-medium.onnx` | US English male — Default |
-| 2 | amy | `en_US-amy-medium.onnx` | US English female |
-| 3 | lessac | `en_US-lessac-medium.onnx` | US English female, natural |
-| 4 | alan | `en_GB-alan-medium.onnx` | UK English male |
-
-> `samuel` is kept as a back-compat alias for `ryan`.
-
-```bash
-~/tools/travisTTS/travis "Hello."          # default voice (ryan)
-~/tools/travisTTS/travis 2 "Hello."        # amy
-~/tools/travisTTS/travis 4 "Hello."        # alan
-~/tools/travisTTS/announce.sh "Hello" lessac
-```
-
----
-
 ## Script reference
 
+### `voicemodels.sh`
+Plays a sample sentence in each installed voice. Run once to pick your preferred voice.
+
 ### `travis [voice_number] "message"`
-Speaks a message. Falls back to `say` (macOS) if Piper isn't available.
+Speaks a message. Voice number: 1=ryan, 2=amy, 3=alan.
 
 ### `announce.sh "message" [voice]`
 Low-level wrapper: speaker lock (no overlapping audio), tmp WAV, full fallback chain (Piper → espeak → say). Used internally by all other scripts.
 
 ### `stop-hook.sh`
-Wired as the `Stop` hook. Reads `last_assistant_message` from the hook JSON on stdin, strips markdown, trims to `TRAVIS_STOP_MAX_CHARS` characters (default 300), and speaks it. Falls back to "Done." if the message is empty.
+Wired as the `Stop` hook. Reads `last_assistant_message` from hook JSON, strips markdown, trims to `TRAVIS_STOP_MAX_CHARS` chars (default 300), speaks it. Falls back to "Done." if message is empty. Disable with `TRAVIS_STOP_HOOK=off` in travis.env.
 
-```bash
-export TRAVIS_STOP_MAX_CHARS=150   # speak shorter summaries
-```
-
-### `start-work.sh arm | fire | on | off | status`
-"On it." announcer. `arm` is called on `UserPromptSubmit`; `fire` is called on `PreToolUse` — it speaks once then disarms itself.
-
-```bash
-~/tools/travisTTS/start-work.sh off     # disable "On it." announcements
-~/tools/travisTTS/start-work.sh on
-~/tools/travisTTS/start-work.sh status
-```
+### `start-work.sh arm | fire | status`
+"On it." announcer. `arm` on `UserPromptSubmit`, `fire` on `PreToolUse` — speaks once then disarms. Disable with `TRAVIS_START_WORK=off`.
 
 ### `claude-announce.sh "message" | on | off | status`
-Manual end-of-coding announcer (fallback / override). Speaks the message immediately and schedules two nag repeats (60 s and 180 s). The `Stop` hook covers this automatically now, but you can still call it directly.
+Manual announcer. Speaks immediately and schedules two nag repeats (60 s and 180 s). The Stop hook covers this automatically — use for manual overrides. Disable with `TRAVIS_ANNOUNCE=off`.
 
-```bash
-~/tools/travisTTS/claude-announce.sh "Refactoring done, tests pass."
-~/tools/travisTTS/claude-announce.sh off
-~/tools/travisTTS/claude-announce.sh status
-```
-
-### `waiting-nag.sh start [message] | stop | on | off | status | log [lines]`
-Idle nagger. Starts a detached loop that speaks on a configurable interval schedule.
+### `waiting-nag.sh start [msg] | stop | on | off | status | log [n]`
+Idle nagger. Starts a detached loop that speaks on a configurable schedule. Disable with `TRAVIS_NAG=off`.
 
 ```bash
 ~/tools/travisTTS/waiting-nag.sh status
 ~/tools/travisTTS/waiting-nag.sh log        # tail the nag log
-~/tools/travisTTS/waiting-nag.sh off        # disable nagger
-export CLAUDE_NAG_INTERVALS="60 60 300"     # custom schedule
+export CLAUDE_NAG_INTERVALS="60 60 300"     # custom schedule (3 nags then stop)
 ```
 
-Default schedule: `"60 60 60 300 300 300"` — six nags, first three ~1 min apart, last three ~5 min apart, then stops.
+Default schedule: `"60 60 60 300 300 300"` — six nags, first three ~1 min apart, last three ~5 min apart.
 
 ---
 
 ## On/off switches
 
-Travis has three independent on/off switches:
-
-| Switch | Controls | Command |
-|--------|----------|---------|
-| `stop-hook.sh` | Automatic Stop announcements | `TRAVIS_STOP_MAX_CHARS=0` or disable the hook |
-| `start-work.sh` | "On it." on task start | `start-work.sh on/off/status` |
-| `claude-announce.sh` | Manual end-of-coding announcements | `claude-announce.sh on/off/status` |
-| `waiting-nag.sh` | Idle nag reminders | `waiting-nag.sh on/off/status` |
+| Feature | travis.env variable | Default |
+|---------|-------------------|---------|
+| Stop hook announcement | `TRAVIS_STOP_HOOK=off` | on |
+| "On it." start announcement | `TRAVIS_START_WORK=off` | on |
+| Idle nagger | `TRAVIS_NAG=off` | on |
+| Manual announce | `TRAVIS_ANNOUNCE=off` | on |

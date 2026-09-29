@@ -17,10 +17,14 @@
 # Starting a new announcement cancels any pending nags.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=travis-config.sh
+source "$SCRIPT_DIR/travis-config.sh"
+
 STATE_FILE="$SCRIPT_DIR/.claude-announce-enabled"
 NAG_PID_FILE="$SCRIPT_DIR/.claude-announce-nag-pids"
 
 is_off() {
+    [ "${TRAVIS_ANNOUNCE:-on}" = "off" ] && return 0
     [ -f "$STATE_FILE" ] && [ "$(tr -d '[:space:]' < "$STATE_FILE")" = "off" ]
 }
 
@@ -37,7 +41,7 @@ kill_nags() {
 
 speak() {
     local msg="$1"
-    "$SCRIPT_DIR/travis" "$msg"
+    "$SCRIPT_DIR/announce.sh" "$msg" "${TRAVIS_VOICE:-ryan}"
 }
 
 case "$1" in

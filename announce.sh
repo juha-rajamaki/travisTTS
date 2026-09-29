@@ -8,38 +8,34 @@ MESSAGE="${1:-Task completed}"
 VOICE="${2:-ryan}"
 
 # Available voices (model files live in ~/.local/share/piper/voices/):
-#   ryan    - en_US-ryan-medium.onnx  (default — install.sh downloads this)
-#   samuel  - samuel.onnx             (alias for ryan-medium, kept for back-compat)
+#   ryan    - en_US-ryan-high.onnx    (default)
 #   amy     - en_US-amy-medium.onnx
-#   lessac  - en_US-lessac-medium.onnx
 #   alan    - en_GB-alan-medium.onnx
+#   samuel  - alias for ryan (back-compat)
 
 VOICE_DIR="${HOME}/.local/share/piper/voices"
 PLAY_RATE="22050"
 
 case "$VOICE" in
     "1"|"ryan"|"samuel"|"sam")
-        # samuel.onnx is the ryan-medium model saved by install.sh
-        MODEL_FILE="$VOICE_DIR/en_US-ryan-medium.onnx"
+        MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
+        [ -f "$MODEL_FILE" ] || MODEL_FILE="$VOICE_DIR/en_US-ryan-medium.onnx"
         [ -f "$MODEL_FILE" ] || MODEL_FILE="$VOICE_DIR/samuel.onnx"
-        VOICE_NAME="en_US-ryan-medium"
+        VOICE_NAME="ryan"
         ;;
     "2"|"amy")
         MODEL_FILE="$VOICE_DIR/en_US-amy-medium.onnx"
         VOICE_NAME="amy"
         ;;
-    "3"|"lessac")
-        MODEL_FILE="$VOICE_DIR/en_US-lessac-medium.onnx"
-        VOICE_NAME="lessac"
-        ;;
-    "4"|"alan")
+    "3"|"alan")
         MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"
         VOICE_NAME="alan"
         ;;
     *)
-        MODEL_FILE="$VOICE_DIR/en_US-ryan-medium.onnx"
+        MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
+        [ -f "$MODEL_FILE" ] || MODEL_FILE="$VOICE_DIR/en_US-ryan-medium.onnx"
         [ -f "$MODEL_FILE" ] || MODEL_FILE="$VOICE_DIR/samuel.onnx"
-        VOICE_NAME="en_US-ryan-medium"
+        VOICE_NAME="ryan"
         ;;
 esac
 

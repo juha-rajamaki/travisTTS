@@ -2,21 +2,20 @@
 
 # start-work.sh — says "On it." on the first tool use after a user prompt.
 #
-# Wired as a PreToolUse hook. Uses a state flag file that is:
-#   - SET   by the UserPromptSubmit hook (new prompt arrived)
-#   - CLEARED here on the first PreToolUse (Claude just started working)
+# arm/fire pair: arm is called on UserPromptSubmit, fire on PreToolUse.
+# Speaks once per prompt then disarms until the next prompt.
 #
-# This way only the very first tool call speaks — not every tool call.
-#
-# Usage (hooks):
-#   UserPromptSubmit -> start-work.sh arm
-#   PreToolUse       -> start-work.sh fire
+# Config (travis.env):
+#   TRAVIS_START_WORK=off   disable entirely
+#   TRAVIS_VOICE=ryan|...   voice to use
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FLAG_FILE="$SCRIPT_DIR/.start-work-armed"
-STATE_FILE="$SCRIPT_DIR/.start-work-enabled"
+# shellcheck source=travis-config.sh
+source "$SCRIPT_DIR/travis-config.sh"
 
-is_off() { [ -f "$STATE_FILE" ] && [ "$(tr -d '[:space:]' < "$STATE_FILE")" = "off" ]; }
+FLAG_FILE="$SCRIPT_DIR/.start-work-armed"
+
+is_off() { [ "${TRAVIS_START_WORK:-on}" = "off" ]; }
 
 case "$1" in
     arm)
@@ -27,23 +26,14 @@ case "$1" in
         if [ -f "$FLAG_FILE" ]; then
             rm -f "$FLAG_FILE"
             is_off && exit 0
-            "$SCRIPT_DIR/travis" "On it."
+            "$SCRIPT_DIR/announce.sh" "On it." "${TRAVIS_VOICE:-ryan}"
         fi
         ;;
-    on|enable)
-        echo "on" > "$STATE_FILE"
-        echo "Start-work announcement: ON"
-        ;;
-    off|disable)
-        echo "off" > "$STATE_FILE"
-        rm -f "$FLAG_FILE"
-        echo "Start-work announcement: OFF"
-        ;;
     status)
-        if is_off; then echo "OFF"; else echo "ON"; fi
+        if is_off; then echo "OFF (travis.env)"; else echo "ON"; fi
         ;;
     *)
-        echo "Usage: start-work.sh arm | fire | on | off | status"
+        echo "Usage: start-work.sh arm | fire | status"
         exit 1
         ;;
 esac
