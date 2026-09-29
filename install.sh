@@ -215,17 +215,16 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "Next steps:"
 echo ""
-echo "  1. Wire up Claude Code hooks — add to .claude/settings.json:"
+echo "  1. Wire up Claude Code hooks — add to ~/.claude/settings.json (global, all projects):"
 echo ""
 echo '     "hooks": {'
 echo '       "Notification":     [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh start" }] }],'
-echo '       "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }] }],'
-echo '       "PreToolUse":       [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }] }],'
-echo '       "PostToolUse":      [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }] }]'
+echo '       "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }, { "type": "command", "command": "'"$INSTALL_DIR"'/start-work.sh arm" }] }],'
+echo '       "PreToolUse":       [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }, { "type": "command", "command": "'"$INSTALL_DIR"'/start-work.sh fire" }] }],'
+echo '       "PostToolUse":      [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }] }],'
+echo '       "Stop":             [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/stop-hook.sh" }] }]'
 echo '     }'
 echo ""
-echo "  2. Add to your CLAUDE.md:"
-echo ""
-echo '     At the end of every coding task, run:'
-echo '     ~/tools/travisTTS/claude-announce.sh "<one or two sentence summary>"'
+echo "  Tip: Add the hooks to ~/.claude/settings.json (not per-project) so Travis works"
+echo "  automatically in every project without any extra setup."
 echo ""
