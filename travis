@@ -6,12 +6,13 @@
 # Voices:
 #   1 = ryan    (en_US-ryan-medium — default)
 #   2 = amy     (en_US-amy-medium)
-#   3 = lessac  (en_US-lessac-medium)
-#   4 = alan    (en_GB-alan-medium)
+#   3 = alan    (en_GB-alan-medium)
+#   4 = jenny   (en_GB-jenny_dioco-medium)
+#   5 = kristin (en_US-kristin-medium)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-VOICE_NAMES=(ryan amy alan)
+VOICE_NAMES=(ryan amy alan jenny kristin)
 
 if [[ "$1" =~ ^[0-9]+$ ]]; then
     idx=$(( $1 - 1 ))

@@ -26,8 +26,8 @@ git clone https://github.com/juha-rajamaki/travisTTS.git ~/tools/travisTTS
 chmod +x ~/tools/travisTTS/*.sh ~/tools/travisTTS/travis
 pip3 install --user piper-tts
 mkdir -p ~/.local/share/piper/voices && cd ~/.local/share/piper/voices
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-high/en_US-ryan-high.onnx
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-high/en_US-ryan-high.onnx.json
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx
+wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx.json
 ```
 
 ---
@@ -88,7 +88,7 @@ TRAVIS_START_WORK=on      # Say "On it." when Claude starts working
 TRAVIS_NAG=on             # Repeat reminders while Claude is idle
 TRAVIS_ANNOUNCE=on        # Manual claude-announce.sh calls
 
-# Voice: ryan (default) | amy | alan
+# Voice: ryan (default) | amy | alan | jenny | kristin
 TRAVIS_VOICE=ryan
 
 # How many characters of the Stop hook message to speak
@@ -113,6 +113,8 @@ Run `voicemodels.sh` to hear each voice before choosing:
 | 1 | **ryan** | `en_US-ryan-high.onnx` | US English male — Default |
 | 2 | amy | `en_US-amy-medium.onnx` | US English female |
 | 3 | alan | `en_GB-alan-medium.onnx` | UK English male |
+| 4 | jenny | `en_GB-jenny_dioco-medium.onnx` | UK English female |
+| 5 | kristin | `en_US-kristin-medium.onnx` | US English female |
 
 Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.claude/travis.env`.
 
@@ -138,7 +140,7 @@ Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.cl
 Plays a sample sentence in each installed voice. Run once to pick your preferred voice.
 
 ### `travis [voice_number] "message"`
-Speaks a message. Voice number: 1=ryan, 2=amy, 3=alan.
+Speaks a message. Voice number: 1=ryan, 2=amy, 3=alan, 4=jenny, 5=kristin.
 
 ### `announce.sh "message" [voice]`
 Low-level wrapper: speaker lock (no overlapping audio), tmp WAV, full fallback chain (Piper → espeak → say). Used internally by all other scripts.

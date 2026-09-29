@@ -22,6 +22,8 @@ fi
 #   ryan    - en_US-ryan-high.onnx    (default)
 #   amy     - en_US-amy-medium.onnx
 #   alan    - en_GB-alan-medium.onnx
+#   jenny   - en_GB-jenny_dioco-medium.onnx
+#   kristin - en_US-kristin-medium.onnx
 #   samuel  - alias for ryan (back-compat)
 
 VOICE_DIR="${HOME}/.local/share/piper/voices"
@@ -41,6 +43,14 @@ case "$VOICE" in
     "3"|"alan")
         MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"
         VOICE_NAME="alan"
+        ;;
+    "4"|"jenny")
+        MODEL_FILE="$VOICE_DIR/en_GB-jenny_dioco-medium.onnx"
+        VOICE_NAME="jenny"
+        ;;
+    "5"|"kristin")
+        MODEL_FILE="$VOICE_DIR/en_US-kristin-medium.onnx"
+        VOICE_NAME="kristin"
         ;;
     *)
         MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"

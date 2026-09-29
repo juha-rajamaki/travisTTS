@@ -14,7 +14,7 @@
 #   TRAVIS_START_WORK=on|off         "On it." on task start (default: on)
 #   TRAVIS_NAG=on|off                Idle waiting nagger (default: on)
 #   TRAVIS_ANNOUNCE=on|off           Manual claude-announce.sh (default: on)
-#   TRAVIS_VOICE=ryan|amy|alan       Default voice (default: ryan)
+#   TRAVIS_VOICE=ryan|amy|alan|jenny|kristin  Default voice (default: ryan)
 #   TRAVIS_STOP_MAX_CHARS=N          Max chars spoken by Stop hook (default: 300)
 #   CLAUDE_NAG_INTERVALS="60 60 300" Nag schedule in seconds
 #   TRAVIS_QUIET_FROM=HH:MM          Start of do-not-disturb window (default: unset)

@@ -12,7 +12,7 @@ INSTALL_DIR="$HOME/tools/travisTTS"
 REPO="https://github.com/juha-rajamaki/travisTTS.git"
 VOICE_DIR="$HOME/.local/share/piper/voices"
 VOICE_MODEL_BASE="en_US-ryan-medium"
-HF_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main/en_US/en_US-ryan-medium"
+HF_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/medium"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

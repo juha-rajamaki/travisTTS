@@ -13,9 +13,11 @@ HF_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main"
 
 # Format: "name:model_file:hf_path"
 VOICE_ENTRIES=(
-    "ryan:en_US-ryan-high.onnx:en_US/en_US-ryan-high"
-    "amy:en_US-amy-medium.onnx:en_US/en_US-amy-medium"
-    "alan:en_GB-alan-medium.onnx:en_GB/en_GB-alan-medium"
+    "ryan:en_US-ryan-high.onnx:en/en_US/ryan/high"
+    "amy:en_US-amy-medium.onnx:en/en_US/amy/medium"
+    "alan:en_GB-alan-medium.onnx:en/en_GB/alan/medium"
+    "jenny:en_GB-jenny_dioco-medium.onnx:en/en_GB/jenny_dioco/medium"
+    "kristin:en_US-kristin-medium.onnx:en/en_US/kristin/medium"
 )
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,7 +80,7 @@ if [ "$1" = "--download" ]; then
         done
         if [ "$found" -eq 0 ]; then
             echo "Unknown voice: $target"
-            echo "Available: ryan, amy, alan"
+            echo "Available: ryan, amy, alan, jenny, kristin"
             exit 1
         fi
     fi
