@@ -19,7 +19,8 @@
       { "matcher": "", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/waiting-nag.sh stop" }] }
     ],
     "SubagentStop": [
-      { "matcher": "^code-security-auditor$", "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=alan \"$CLAUDE_PROJECT_DIR\"/stop-hook.sh" }] }
+      { "matcher": "^code-security-auditor$", "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=alan \"$CLAUDE_PROJECT_DIR\"/stop-hook.sh" }] },
+      { "matcher": "^Plan$", "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=amy \"$CLAUDE_PROJECT_DIR\"/stop-hook.sh" }] }
     ],
     "Stop": [
       { "matcher": "", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/stop-hook.sh" }] }

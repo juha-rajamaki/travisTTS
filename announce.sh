@@ -10,8 +10,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=travis-config.sh
 source "$SCRIPT_DIR/travis-config.sh"
 
-# Voice priority: TRAVIS_VOICE from config > $2 argument > built-in default
-VOICE="${TRAVIS_VOICE:-${2:-ryan}}"
+# Voice priority: explicit $2 argument > TRAVIS_VOICE (env or travis.env) > built-in default.
+# Hook scripts never pass $2, so they always follow the config; an explicit choice such as
+# `travis 3 "..."` or the voicemodels.sh demo is honoured.
+VOICE="${2:-${TRAVIS_VOICE:-ryan}}"
 
 if travis_is_quiet; then
     echo "DND (${TRAVIS_QUIET_FROM}–${TRAVIS_QUIET_TO}): $MESSAGE"
@@ -114,7 +116,7 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     # One cleanup for every exit path; INT/TERM (e.g. a hook timeout) exit through the EXIT trap.
     trap 'rm -f "$WAV" "$WAV.pad" "$WIN_WAV"' EXIT
     trap 'exit 130' INT TERM
-    echo "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --output_file "$WAV" 2>/dev/null
+    printf '%s\n' "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --output_file "$WAV" 2>/dev/null
     if [[ "$OSTYPE" == "darwin"* ]]; then
         afplay "$WAV" 2>/dev/null
     elif grep -qi microsoft /proc/version 2>/dev/null; then
@@ -155,10 +157,11 @@ PY
     rm -f "$WAV"
 elif command -v espeak >/dev/null 2>&1; then
     echo "Announcing (espeak fallback): $MESSAGE"
-    espeak "$MESSAGE" -s 140 -v en-us
+    # Text on stdin, never argv: a message like "-w/some/file" would be parsed as an option.
+    printf '%s\n' "$MESSAGE" | espeak --stdin -s 140 -v en-us
 elif command -v say >/dev/null 2>&1; then
     echo "Announcing (say fallback): $MESSAGE"
-    say "$MESSAGE"
+    printf '%s\n' "$MESSAGE" | say -f -
 else
     echo "TTS: $MESSAGE"
 fi

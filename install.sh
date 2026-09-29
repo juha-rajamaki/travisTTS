@@ -25,16 +25,21 @@ need() {
     command -v "$1" >/dev/null 2>&1 || { echo "ERROR: '$1' is required but not found. $2"; exit 1; }
 }
 
+# Downloads into "$dest.part" and moves it into place only on success, so an interrupted
+# download never leaves a truncated file that later passes as installed.
 download() {
     local url="$1" dest="$2"
+    trap 'rm -f "$dest.part"; exit 130' INT TERM   # Ctrl-C mid-download leaves no stray .part
     if command -v curl >/dev/null 2>&1; then
-        curl -fSL --progress-bar "$url" -o "$dest"
+        curl -fSL --progress-bar "$url" -o "$dest.part" || { rm -f "$dest.part"; trap - INT TERM; return 1; }
     elif command -v wget >/dev/null 2>&1; then
-        wget -q --show-progress "$url" -O "$dest"
+        wget -q --show-progress "$url" -O "$dest.part" || { rm -f "$dest.part"; trap - INT TERM; return 1; }
     else
         echo "ERROR: neither curl nor wget found — cannot download files."
         exit 1
     fi
+    trap - INT TERM
+    mv -f "$dest.part" "$dest"
 }
 
 detect_os() {
@@ -184,6 +189,12 @@ else
     say_info "Downloading from Hugging Face..."
     download "$HF_BASE/${VOICE_MODEL_BASE}.onnx"      "$RYAN_ONNX"
     download "$HF_BASE/${VOICE_MODEL_BASE}.onnx.json" "$RYAN_JSON"
+    if ! model_ok "$RYAN_ONNX"; then
+        # A real model is tens of MB; a small file is an error page saved with HTTP 200.
+        rm -f "$RYAN_ONNX" "$RYAN_JSON"
+        echo "ERROR: downloaded voice model is not valid (too small) — check your connection and re-run."
+        exit 1
+    fi
     say_ok "Voice model downloaded to $VOICE_DIR"
 fi
 
@@ -227,4 +238,8 @@ echo '     }'
 echo ""
 echo "  Tip: Add the hooks to ~/.claude/settings.json (not per-project) so Travis works"
 echo "  automatically in every project without any extra setup."
+echo ""
+echo "  Optional: give subagents their own voice (e.g. alan for security audits, amy"
+echo "  for plans) with a SubagentStop hook — see \"a different voice per subagent\" in"
+echo "  $INSTALL_DIR/README.md."
 echo ""

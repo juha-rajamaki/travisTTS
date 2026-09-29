@@ -20,15 +20,13 @@ source "$SCRIPT_DIR/travis-config.sh"
 MAX_CHARS="${TRAVIS_STOP_MAX_CHARS:-300}"
 
 # Read JSON from stdin (Claude passes it automatically).
-# `timeout` is unreliable on macOS; use IFS read with a 2-second deadline instead.
+# `timeout` is unreliable on macOS; read all of stdin up to EOF with a 5-second deadline instead.
+# (A line-by-line read with a short per-line timeout could stop halfway through the JSON.)
 HOOK_JSON=""
 if [ -t 0 ]; then
     : # no stdin (interactive call) — skip
 else
-    IFS= read -r -t 2 HOOK_JSON 2>/dev/null || true
-    while IFS= read -r -t 0.1 line 2>/dev/null; do
-        HOOK_JSON="${HOOK_JSON}${line}"
-    done
+    IFS= read -r -d '' -t 5 HOOK_JSON 2>/dev/null || true
 fi
 
 MSG="$(printf '%s' "$HOOK_JSON" | python3 -c "

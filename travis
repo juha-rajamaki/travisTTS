@@ -19,7 +19,7 @@ if [[ "$1" =~ ^[0-9]+$ ]]; then
     VOICE="${VOICE_NAMES[$idx]:-ryan}"
     MESSAGE="${2:-Hello, I am Travis. Your code assistant.}"
 else
-    VOICE="ryan"
+    VOICE=""   # no number given: use the configured voice (TRAVIS_VOICE, default ryan)
     MESSAGE="${1:-Hello, I am Travis. Your code assistant.}"
 fi
 

@@ -22,12 +22,19 @@ VOICE_ENTRIES=(
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+# A real model is tens of MB; anything under 1 MB is an error page or a cut-off download.
+model_ok() {
+    local f="$1"
+    [ -f "$f" ] && \
+        [ "$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo 0)" -gt 1000000 ]
+}
+
 download_voice() {
     local name="$1" model_file="$2" hf_path="$3"
     local onnx="$VOICE_DIR/$model_file"
     local json="$VOICE_DIR/$model_file.json"
 
-    if [ -f "$onnx" ] && [ -f "$json" ]; then
+    if model_ok "$onnx" && [ -s "$json" ]; then
         echo "  [$name]  already installed — skipping"
         return 0
     fi
@@ -35,19 +42,29 @@ download_voice() {
     echo "  [$name]  downloading from Hugging Face..."
     mkdir -p "$VOICE_DIR"
 
+    # Download into .part files and move them into place only when both succeeded, so an
+    # interrupted download never leaves a truncated model that looks installed.
     local url_base="$HF_BASE/$hf_path/$model_file"
+    local ok=1
     if command -v curl >/dev/null 2>&1; then
-        curl -fSL --progress-bar "$url_base"      -o "$onnx" && \
-        curl -fSL --progress-bar "$url_base.json" -o "$json"
+        curl -fSL --progress-bar "$url_base"      -o "$onnx.part" && \
+        curl -fSL --progress-bar "$url_base.json" -o "$json.part" || ok=0
     elif command -v wget >/dev/null 2>&1; then
-        wget -q --show-progress "$url_base"      -O "$onnx" && \
-        wget -q --show-progress "$url_base.json" -O "$json"
+        wget -q --show-progress "$url_base"      -O "$onnx.part" && \
+        wget -q --show-progress "$url_base.json" -O "$json.part" || ok=0
     else
         echo "  ERROR: neither curl nor wget found"
         return 1
     fi
 
-    if [ -f "$onnx" ] && [ -f "$json" ]; then
+    if [ "$ok" -eq 1 ] && model_ok "$onnx.part" && [ -s "$json.part" ]; then
+        mv -f "$onnx.part" "$onnx" && mv -f "$json.part" "$json"
+    else
+        rm -f "$onnx.part" "$json.part"
+        ok=0
+    fi
+
+    if [ "$ok" -eq 1 ]; then
         echo "  [$name]  installed to $VOICE_DIR"
     else
         echo "  [$name]  download failed"

@@ -64,6 +64,19 @@ Add these hooks to `~/.claude/settings.json` (global — works in every project 
 }
 ```
 
+### Optional: a different voice per subagent
+
+Travis can speak a subagent's result in its own voice when that agent finishes, so you can tell by ear who is talking. Add a `SubagentStop` block next to the hooks above. `matcher` is a regex on the agent type, and the voice set in the command overrides any `travis.env`:
+
+```json
+"SubagentStop": [
+  { "matcher": "^code-security-auditor$", "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=alan $HOME/tools/travisTTS/stop-hook.sh" }] },
+  { "matcher": "^Plan$",                  "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=amy $HOME/tools/travisTTS/stop-hook.sh" }] }
+]
+```
+
+Use any agent type (`Explore`, `general-purpose`, your own agents) and any installed voice. Agents with no matching entry stay silent. The travisTTS repo itself ships this setup in its `.claude/settings.json`.
+
 ---
 
 ## Per-project configuration
@@ -131,10 +144,18 @@ Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.cl
 | `Notification` | `waiting-nag.sh start` | Starts the idle nagger (Claude waiting for you) |
 | `Stop` | `stop-hook.sh` | Extracts `last_assistant_message` and speaks it |
 | `SubagentStop` (`code-security-auditor`) | `TRAVIS_VOICE=alan stop-hook.sh` | Speaks the security audit result in **alan's** voice, so security findings stand out from ryan (this repo's `.claude/settings.json`) |
+| `SubagentStop` (`Plan`) | `TRAVIS_VOICE=amy stop-hook.sh` | Speaks the plan summary in **amy's** voice when a Plan agent finishes (this repo's `.claude/settings.json`) |
 
 ---
 
 ## Script reference
+
+### `testvoice.sh [single|multi]`
+Checks that each role is spoken in the right voice by running the real hooks from `.claude/settings.json` with simulated hook events. Each clip also says which voice should be speaking, so you can confirm by ear. With no argument it detects the mode from the settings.
+- `single` — every role (planning, coding, security) is spoken by the Stop hook in the default voice (ryan)
+- `multi` — planning → amy, coding → ryan, security → alan
+
+Exits non-zero if any role is spoken in the wrong voice or has no hook.
 
 ### `voicemodels.sh`
 Plays a sample sentence in each installed voice. Run once to pick your preferred voice.
