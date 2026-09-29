@@ -46,4 +46,4 @@ except Exception:
 
 [ -z "$MSG" ] && MSG="Done."
 
-"$SCRIPT_DIR/announce.sh" "$MSG" "${TRAVIS_VOICE:-ryan}" </dev/null
+"$SCRIPT_DIR/announce.sh" "$MSG" </dev/null

@@ -5,11 +5,13 @@
 # Example: ./announce.sh "Task completed" ryan
 
 MESSAGE="${1:-Task completed}"
-VOICE="${2:-ryan}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=travis-config.sh
 source "$SCRIPT_DIR/travis-config.sh"
+
+# Voice priority: TRAVIS_VOICE from config > $2 argument > built-in default
+VOICE="${TRAVIS_VOICE:-${2:-ryan}}"
 
 if travis_is_quiet; then
     echo "DND (${TRAVIS_QUIET_FROM}–${TRAVIS_QUIET_TO}): $MESSAGE"

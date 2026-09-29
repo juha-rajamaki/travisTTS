@@ -26,7 +26,7 @@ case "$1" in
         if [ -f "$FLAG_FILE" ]; then
             rm -f "$FLAG_FILE"
             is_off && exit 0
-            "$SCRIPT_DIR/announce.sh" "On it." "${TRAVIS_VOICE:-ryan}"
+            "$SCRIPT_DIR/announce.sh" "On it."
         fi
         ;;
     status)

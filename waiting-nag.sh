@@ -38,7 +38,7 @@ STATE_FILE="$SCRIPT_DIR/.waiting-nag-enabled"
 START_FILE="$SCRIPT_DIR/.waiting-nag.started"
 LOG_FILE="${CLAUDE_NAG_LOG:-$SCRIPT_DIR/.waiting-nag.log}"
 LOG_MAX_BYTES="${CLAUDE_NAG_LOG_MAX:-262144}"
-VOICE="${TRAVIS_VOICE:-ryan}"
+VOICE=""  # resolved by announce.sh from TRAVIS_VOICE config
 if [ -n "$CLAUDE_NAG_INTERVAL" ]; then
     NAG_INTERVALS="$CLAUDE_NAG_INTERVAL"
 else
@@ -137,19 +137,15 @@ case "$1" in
                 logev "off" "switched off mid-wait, $spoken reminder(s) spoken"
                 break
             fi
-            out="$("$SCRIPT_DIR/announce.sh" "$MSG" "$VOICE" 2>&1)"
+            out="$("$SCRIPT_DIR/announce.sh" "$MSG" 2>&1)"
             rc=$?
             spoken=$(( spoken + 1 ))
             heard="$(printf '%s' "$out" | sed -n 's/.*Announcing (\([^)]*\)).*/\1/p' | head -1)"
             w="$(waited_for)"
             if [ "$rc" -ne 0 ]; then
                 logev "spoke" "reminder $spoken/${#intervals[@]} FAILED (announce.sh exit $rc)${w:+ $w}"
-            elif [ -z "$heard" ]; then
-                logev "spoke" "reminder $spoken/${#intervals[@]}, voice unknown${w:+ $w}"
-            elif [ "$heard" = "$VOICE" ]; then
-                logev "spoke" "reminder $spoken/${#intervals[@]}, voice $heard${w:+ $w}"
             else
-                logev "spoke" "reminder $spoken/${#intervals[@]}, voice '$heard' NOT '$VOICE'${w:+ $w}"
+                logev "spoke" "reminder $spoken/${#intervals[@]}, voice ${heard:-unknown}${w:+ $w}"
             fi
         done
         if [ "$(cat "$PID_FILE" 2>/dev/null)" = "$$" ]; then

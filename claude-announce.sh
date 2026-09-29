@@ -41,7 +41,7 @@ kill_nags() {
 
 speak() {
     local msg="$1"
-    "$SCRIPT_DIR/announce.sh" "$msg" "${TRAVIS_VOICE:-ryan}"
+    "$SCRIPT_DIR/announce.sh" "$msg"
 }
 
 case "$1" in
