@@ -100,7 +100,10 @@ fi
 if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     echo "Announcing ($VOICE_NAME): $MESSAGE"
     WAV="$(mktemp "${TMPDIR:-/tmp}/announce_speech.XXXXXX")" || WAV="/tmp/announce_speech_$$.tmp"
-    trap 'rm -f "$WAV"' EXIT
+    WIN_WAV=""
+    # One cleanup for every exit path; INT/TERM (e.g. a hook timeout) exit through the EXIT trap.
+    trap 'rm -f "$WAV" "$WAV.pad" "$WIN_WAV"' EXIT
+    trap 'exit 130' INT TERM
     echo "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --output_file "$WAV" 2>/dev/null
     if [[ "$OSTYPE" == "darwin"* ]]; then
         afplay "$WAV" 2>/dev/null
@@ -109,13 +112,15 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
         # \\wsl.localhost UNC path returns after a fraction of a second - so copy the file onto
         # the Windows drive first. Prepend 400 ms of silence: Windows audio devices (Bluetooth
         # especially) wake up late and swallow the start of the first word.
-        python3 - "$WAV" <<'PY' 2>/dev/null
+        # Padded into a side file and moved over only on success, so a failure never leaves a
+        # truncated WAV behind to play.
+        python3 - "$WAV" "$WAV.pad" <<'PY' 2>/dev/null && mv -f "$WAV.pad" "$WAV"
 import sys, wave
-p = sys.argv[1]
-with wave.open(p, 'rb') as r:
+src, dst = sys.argv[1], sys.argv[2]
+with wave.open(src, 'rb') as r:
     params, frames = r.getparams(), r.readframes(r.getnframes())
 pad = b'\0' * int(params.framerate * 0.4) * params.sampwidth * params.nchannels
-with wave.open(p, 'wb') as w:
+with wave.open(dst, 'wb') as w:
     w.setparams(params)
     w.writeframes(pad + frames)
 PY
@@ -123,15 +128,17 @@ PY
         WIN_WAV_DIR="$(wslpath -u "$WIN_TEMP" 2>/dev/null)"
         if [ -n "$WIN_TEMP" ] && [ -d "$WIN_WAV_DIR" ] && cp "$WAV" "$WIN_WAV_DIR/$(basename "$WAV")" 2>/dev/null; then
             WIN_WAV="$WIN_WAV_DIR/$(basename "$WAV")"
-            trap 'rm -f "$WAV" "$WIN_WAV"' EXIT
-            powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '$WIN_TEMP\\$(basename "$WAV")').PlaySync()" >/dev/null 2>&1
+            # Inside a single-quoted PowerShell string a ' must be doubled (e.g. C:\Users\O'Brien).
+            PS_PATH="$WIN_TEMP\\$(basename "$WAV")"
+            powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '${PS_PATH//\'/\'\'}').PlaySync()" >/dev/null 2>&1
             rm -f "$WIN_WAV"
         else
-            paplay "$WAV" 2>/dev/null
+            paplay "$WAV" 2>/dev/null || aplay -r "$PLAY_RATE" -f S16_LE -t wav "$WAV" 2>/dev/null
         fi
     elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
         # Git Bash / Cygwin on Windows
-        powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '$(cygpath -w "$WAV" 2>/dev/null || echo "$WAV")').PlaySync()" 2>/dev/null
+        PS_PATH="$(cygpath -w "$WAV" 2>/dev/null || echo "$WAV")"
+        powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '${PS_PATH//\'/\'\'}').PlaySync()" 2>/dev/null
     else
         aplay -r "$PLAY_RATE" -f S16_LE -t wav "$WAV" 2>/dev/null
     fi

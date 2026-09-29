@@ -29,6 +29,33 @@ _travis_snapshot() {
     fi
 }
 
+# Read a travis.env file WITHOUT executing it. The project lookup walks up from $CWD, so a
+# travis.env can come from any cloned repo; sourcing it would run that repo's shell code on
+# every hook. Only known keys with plain values are accepted, everything else is ignored.
+_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO'
+_TRAVIS_LINE_RE="^[[:space:]]*(export[[:space:]]+)?($_TRAVIS_KEYS)=(.*)\$"
+_TRAVIS_DQ_RE='^"([^"]*)"'
+_TRAVIS_SQ_RE="^'([^']*)'"
+_TRAVIS_SAFE_RE='^[A-Za-z0-9:._ -]*$'
+
+_travis_read_env() {
+    local line key val
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$'\r'}"
+        [[ "$line" =~ $_TRAVIS_LINE_RE ]] || continue
+        key="${BASH_REMATCH[2]}"
+        val="${BASH_REMATCH[3]}"
+        if [[ "$val" =~ $_TRAVIS_DQ_RE ]] || [[ "$val" =~ $_TRAVIS_SQ_RE ]]; then
+            val="${BASH_REMATCH[1]}"
+        else
+            val="${val%%#*}"                        # drop trailing comment
+            val="${val%"${val##*[![:space:]]}"}"    # trim trailing whitespace
+        fi
+        [[ "$val" =~ $_TRAVIS_SAFE_RE ]] || continue
+        printf -v "$key" '%s' "$val"
+    done < "$1"
+}
+
 _travis_load_config() {
     # Snapshot caller-set vars before loading files (so they can win at the end)
     local _snap_STOP_HOOK; _snap_STOP_HOOK="$(_travis_snapshot TRAVIS_STOP_HOOK)"
@@ -43,8 +70,7 @@ _travis_load_config() {
 
     # 1. Global user config
     local global_env="$HOME/.config/travis/travis.env"
-    # shellcheck source=/dev/null
-    [ -f "$global_env" ] && source "$global_env"
+    [ -f "$global_env" ] && _travis_read_env "$global_env"
 
     # 2. Per-project config: walk up from CWD to find .claude/travis.env
     local dir="${CWD:-$(pwd)}"
@@ -59,8 +85,7 @@ _travis_load_config() {
         [ "$parent" = "$dir" ] && break
         dir="$parent"
     done
-    # shellcheck source=/dev/null
-    [ -f "$project_env" ] && source "$project_env"
+    [ -f "$project_env" ] && _travis_read_env "$project_env"
 
     # 3. Restore caller-set vars so they always win over file config
     [ -n "$_snap_STOP_HOOK"  ] && eval "$_snap_STOP_HOOK"
