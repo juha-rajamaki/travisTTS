@@ -105,9 +105,30 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         afplay "$WAV" 2>/dev/null
     elif grep -qi microsoft /proc/version 2>/dev/null; then
-        # WSL: use PowerShell to play audio through Windows
-        powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '$WAV').PlaySync()" 2>/dev/null || \
-            aplay -r "$PLAY_RATE" -f S16_LE -t wav "$WAV" 2>/dev/null
+        # WSL: play through Windows. SoundPlayer can't open a Linux path like /tmp/x.wav, and a
+        # \\wsl.localhost UNC path returns after a fraction of a second - so copy the file onto
+        # the Windows drive first. Prepend 400 ms of silence: Windows audio devices (Bluetooth
+        # especially) wake up late and swallow the start of the first word.
+        python3 - "$WAV" <<'PY' 2>/dev/null
+import sys, wave
+p = sys.argv[1]
+with wave.open(p, 'rb') as r:
+    params, frames = r.getparams(), r.readframes(r.getnframes())
+pad = b'\0' * int(params.framerate * 0.4) * params.sampwidth * params.nchannels
+with wave.open(p, 'wb') as w:
+    w.setparams(params)
+    w.writeframes(pad + frames)
+PY
+        WIN_TEMP="$(cmd.exe /c 'echo %TEMP%' 2>/dev/null | tr -d '\r')"
+        WIN_WAV_DIR="$(wslpath -u "$WIN_TEMP" 2>/dev/null)"
+        if [ -n "$WIN_TEMP" ] && [ -d "$WIN_WAV_DIR" ] && cp "$WAV" "$WIN_WAV_DIR/$(basename "$WAV")" 2>/dev/null; then
+            WIN_WAV="$WIN_WAV_DIR/$(basename "$WAV")"
+            trap 'rm -f "$WAV" "$WIN_WAV"' EXIT
+            powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '$WIN_TEMP\\$(basename "$WAV")').PlaySync()" >/dev/null 2>&1
+            rm -f "$WIN_WAV"
+        else
+            paplay "$WAV" 2>/dev/null
+        fi
     elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
         # Git Bash / Cygwin on Windows
         powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '$(cygpath -w "$WAV" 2>/dev/null || echo "$WAV")').PlaySync()" 2>/dev/null
