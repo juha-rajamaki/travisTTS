@@ -88,7 +88,7 @@ fi
 # ── Speak ────────────────────────────────────────────────────────────────────
 if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     echo "Announcing ($VOICE_NAME): $MESSAGE"
-    WAV="$(mktemp "${TMPDIR:-/tmp}/announce_speech.XXXXXX.wav")" || WAV="/tmp/announce_speech.wav"
+    WAV="$(mktemp "${TMPDIR:-/tmp}/announce_speech.XXXXXX")" || WAV="/tmp/announce_speech_$$.tmp"
     trap 'rm -f "$WAV"' EXIT
     echo "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --output_file "$WAV" 2>/dev/null
     if [[ "$OSTYPE" == "darwin"* ]]; then
