@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "Notification": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/waiting-nag.sh start" }] }
+    ],
+    "UserPromptSubmit": [
+      { "matcher": "", "hooks": [
+        { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/waiting-nag.sh stop" },
+        { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/start-work.sh arm" }
+      ]}
+    ],
+    "PreToolUse": [
+      { "matcher": "", "hooks": [
+        { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/waiting-nag.sh stop" },
+        { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/start-work.sh fire" }
+      ]}
+    ],
+    "PostToolUse": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/waiting-nag.sh stop" }] }
+    ],
+    "Stop": [
+      { "matcher": "", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/stop-hook.sh" }] }
+    ]
+  }
+}
