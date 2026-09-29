@@ -7,6 +7,15 @@
 MESSAGE="${1:-Task completed}"
 VOICE="${2:-ryan}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=travis-config.sh
+source "$SCRIPT_DIR/travis-config.sh"
+
+if travis_is_quiet; then
+    echo "DND (${TRAVIS_QUIET_FROM}–${TRAVIS_QUIET_TO}): $MESSAGE"
+    exit 0
+fi
+
 # Available voices (model files live in ~/.local/share/piper/voices/):
 #   ryan    - en_US-ryan-high.onnx    (default)
 #   amy     - en_US-amy-medium.onnx
