@@ -11,12 +11,8 @@
     ],
     "PreToolUse": [
       { "matcher": "", "hooks": [
-        { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/waiting-nag.sh stop" },
         { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/start-work.sh fire" }
       ]}
-    ],
-    "PostToolUse": [
-      { "matcher": "", "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/waiting-nag.sh stop" }] }
     ],
     "SubagentStop": [
       { "matcher": "^code-security-auditor$", "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=alan \"$CLAUDE_PROJECT_DIR\"/stop-hook.sh" }] },
