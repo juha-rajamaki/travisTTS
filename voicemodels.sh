@@ -20,13 +20,16 @@ VOICE_ENTRIES=(
     "kristin:en_US-kristin-medium.onnx:en/en_US/kristin/medium"
 )
 
-# Per-voice introductions for the demo mode.
-declare -A VOICE_INTRO
-VOICE_INTRO[ryan]="Hi, I'm Ryan — your default voice. I announce when Claude finishes a task and say on it when work begins."
-VOICE_INTRO[amy]="Hi, I'm Amy. I speak up when the Plan agent has finished laying out an implementation plan for you."
-VOICE_INTRO[alan]="Hello, I'm Alan. I report the findings whenever the security auditor has reviewed your code."
-VOICE_INTRO[jenny]="Hi, I'm Jenny. I can be your Travis voice."
-VOICE_INTRO[kristin]="Hi, I'm Kristin. I can be your Travis voice."
+voice_intro() {
+    case "$1" in
+        ryan)    echo "Hi, I'm Ryan — your default voice. I announce when Claude finishes a task and say on it when work begins." ;;
+        amy)     echo "Hi, I'm Amy. I speak up when the Plan agent has finished laying out an implementation plan for you." ;;
+        alan)    echo "Hello, I'm Alan. I report the findings whenever the security auditor has reviewed your code." ;;
+        jenny)   echo "Hi, I'm Jenny. I can be your Travis voice." ;;
+        kristin) echo "Hi, I'm Kristin. I can be your Travis voice." ;;
+        *)       echo "Hello, I am $1. I can be your Travis voice." ;;
+    esac
+}
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -135,7 +138,7 @@ for entry in "${VOICE_ENTRIES[@]}"; do
     fi
     any_found=1
     echo "  [$name]  — $model_file"
-    "$SCRIPT_DIR/announce.sh" "${VOICE_INTRO[$name]:-Hello, I am $name. I can be your Travis voice.}" "$name"
+    "$SCRIPT_DIR/announce.sh" "$(voice_intro "$name")" "$name"
     echo ""
 done
 
