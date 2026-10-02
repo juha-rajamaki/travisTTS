@@ -1,20 +1,78 @@
 #!/bin/bash
 
 # Travis — voice entry point.
-# Usage: ./travis [voice_number] "message"
 #
-# Voices:
-#   1 = ryan    (en_US-ryan-medium — default)
-#   2 = amy     (en_US-amy-medium)
-#   3 = alan    (en_GB-alan-medium)
-#   4 = jenny   (en_GB-jenny_dioco-medium)
-#   5 = kristin (en_US-kristin-medium)
+# Usage:
+#   travis "message"              speak with configured voice
+#   travis <number> "message"     speak with a specific voice (1=ryan 2=amy 3=alan 4=jenny 5=kristin)
+#   travis intro                  play each installed voice saying their introduction line
+#   travis intro <name>           play one voice's introduction (e.g. travis intro alan)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 VOICE_NAMES=(ryan amy alan jenny kristin)
 
-if [[ "$1" =~ ^[0-9]+$ ]]; then
+voice_intro_line() {
+    case "$1" in
+        ryan)    echo "Hi, I'm Ryan — your default voice. I announce when Claude finishes a task." ;;
+        amy)     echo "Hi, I'm Amy. I speak up when the Plan agent has finished laying out an implementation plan for you." ;;
+        alan)    echo "Hello, I'm Alan. I report the findings whenever the security auditor has reviewed your code." ;;
+        jenny)   echo "Hi, I'm Jenny. I can be your Travis voice." ;;
+        kristin) echo "Hi, I'm Kristin. I can be your Travis voice." ;;
+        *)       echo "Hello, I am $1. I can be your Travis voice." ;;
+    esac
+}
+
+VOICE_DIR="$HOME/.local/share/piper/voices"
+
+model_ok() {
+    local f="$1"
+    [ -f "$f" ] && \
+        [ "$(stat -f%z "$f" 2>/dev/null || stat -c%s "$f" 2>/dev/null || echo 0)" -gt 1000000 ]
+}
+
+voice_installed() {
+    local name="$1"
+    case "$name" in
+        ryan)    model_ok "$VOICE_DIR/en_US-ryan-high.onnx" || model_ok "$VOICE_DIR/en_US-ryan-medium.onnx" || model_ok "$VOICE_DIR/samuel.onnx" ;;
+        amy)     model_ok "$VOICE_DIR/en_US-amy-medium.onnx" ;;
+        alan)    model_ok "$VOICE_DIR/en_GB-alan-medium.onnx" ;;
+        jenny)   model_ok "$VOICE_DIR/en_GB-jenny_dioco-medium.onnx" ;;
+        kristin) model_ok "$VOICE_DIR/en_US-kristin-medium.onnx" ;;
+        *)       false ;;
+    esac
+}
+
+if [ "${1:-}" = "intro" ]; then
+    target="${2:-}"
+    if [ -n "$target" ]; then
+        # Single voice intro.
+        if voice_installed "$target"; then
+            "$SCRIPT_DIR/announce.sh" "$(voice_intro_line "$target")" "$target"
+        else
+            echo "Voice '$target' is not installed. Run: voicemodels.sh --download $target"
+            exit 1
+        fi
+    else
+        # All voices intro — play each installed one in order.
+        echo ""
+        echo "Travis TTS — voice introductions"
+        echo "════════════════════════════════"
+        echo ""
+        for name in "${VOICE_NAMES[@]}"; do
+            if voice_installed "$name"; then
+                printf "  [%s]\n" "$name"
+                "$SCRIPT_DIR/announce.sh" "$(voice_intro_line "$name")" "$name"
+            else
+                printf "  [%s]  not installed — run: voicemodels.sh --download %s\n" "$name" "$name"
+            fi
+        done
+        echo ""
+    fi
+    exit 0
+fi
+
+if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
     idx=$(( $1 - 1 ))
     VOICE="${VOICE_NAMES[$idx]:-ryan}"
     MESSAGE="${2:-Hello, I am Travis. Your code assistant.}"
