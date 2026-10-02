@@ -64,16 +64,41 @@ esac
 
 # ── One voice at a time ──────────────────────────────────────────────────────
 # Announcements can overlap (nag fires on its own timer). Two at once COLLIDE —
-# Travis cuts himself off mid-sentence. The lock is released automatically if
-# the process is killed, so waiting-nag.sh stop can always cut in-flight audio.
-LOCK_FILE="${TMPDIR:-/tmp}/travis-announce.lock"
+# Travis cuts himself off mid-sentence.
+# Strategy: kill any in-flight afplay/aplay before starting a new one, then
+# hold a mkdir lock so concurrent callers queue up rather than pile on.
+# mkdir is atomic on macOS and Linux; the lock dir is removed on EXIT so a
+# killed process never leaves it behind.
+LOCK_DIR="${TMPDIR:-/tmp}/travis-announce.lock"
 LOCK_WAIT="${ANNOUNCE_LOCK_WAIT:-120}"
-if command -v flock >/dev/null 2>&1 && exec 9>"$LOCK_FILE" 2>/dev/null; then
-    if ! flock -w "$LOCK_WAIT" 9; then
-        echo "Skipped (waited ${LOCK_WAIT}s for the speaker): $MESSAGE"
-        exit 0
-    fi
+AFPLAY_PID_FILE="${TMPDIR:-/tmp}/travis-afplay.pid"
+
+# Kill any currently-playing afplay/aplay so the new announcement isn't garbled.
+if [ -f "$AFPLAY_PID_FILE" ]; then
+    _old_pid="$(cat "$AFPLAY_PID_FILE" 2>/dev/null)"
+    [ -n "$_old_pid" ] && kill "$_old_pid" 2>/dev/null
+    rm -f "$AFPLAY_PID_FILE"
 fi
+
+# Acquire mkdir lock (works on macOS + Linux, no flock needed).
+_lock_acquired=0
+_lock_deadline=$(( $(date +%s) + LOCK_WAIT ))
+while true; do
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+        _lock_acquired=1
+        trap 'rm -rf "$LOCK_DIR"' EXIT
+        break
+    fi
+    # Check if the owning process is still alive via its pid file inside the lock dir.
+    _owner="$(cat "$LOCK_DIR/pid" 2>/dev/null)"
+    if [ -n "$_owner" ] && ! kill -0 "$_owner" 2>/dev/null; then
+        rm -rf "$LOCK_DIR" 2>/dev/null   # stale lock — remove and retry immediately
+        continue
+    fi
+    [ "$(date +%s)" -ge "$_lock_deadline" ] && { echo "Skipped (waited ${LOCK_WAIT}s for the speaker): $MESSAGE"; exit 0; }
+    sleep 0.2
+done
+echo $$ > "$LOCK_DIR/pid" 2>/dev/null
 
 # ── Resolve piper binary ─────────────────────────────────────────────────────
 PIPER_BIN=""
@@ -114,11 +139,15 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     WAV="$(mktemp "${TMPDIR:-/tmp}/announce_speech.XXXXXX")" || WAV="/tmp/announce_speech_$$.tmp"
     WIN_WAV=""
     # One cleanup for every exit path; INT/TERM (e.g. a hook timeout) exit through the EXIT trap.
-    trap 'rm -f "$WAV" "$WAV.pad" "$WIN_WAV"' EXIT
+    trap 'rm -f "$WAV" "$WAV.pad" "$WIN_WAV" "$AFPLAY_PID_FILE"; rm -rf "$LOCK_DIR"' EXIT
     trap 'exit 130' INT TERM
     printf '%s\n' "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --output_file "$WAV" 2>/dev/null
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        afplay "$WAV" 2>/dev/null
+        afplay "$WAV" 2>/dev/null &
+        _afplay_pid=$!
+        echo "$_afplay_pid" > "$AFPLAY_PID_FILE"
+        wait "$_afplay_pid" 2>/dev/null
+        rm -f "$AFPLAY_PID_FILE"
     elif grep -qi microsoft /proc/version 2>/dev/null; then
         # WSL: play through Windows. SoundPlayer can't open a Linux path like /tmp/x.wav, and a
         # \\wsl.localhost UNC path returns after a fraction of a second - so copy the file onto
