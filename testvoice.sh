@@ -8,12 +8,12 @@
 # that actually spoke, so a missing model that falls back to another voice shows up as a FAIL.
 #
 # Usage: ./testvoice.sh [single|multi]
-#   (no argument)  detect the mode from .claude/settings.json
+#   (no argument)  the mode TRAVIS_MULTIVOICE sets (on = multi)
 #   single         every role speaks through the Stop hook in the default voice (ryan)
-#   multi          each role speaks through its own hook:
-#                    planning  -> amy      (SubagentStop, agent "Plan")
-#                    coding    -> default voice, ryan  (Stop)
-#                    security  -> alan     (SubagentStop, agent "code-security-auditor")
+#   multi          TRAVIS_MULTIVOICE=on — each role speaks in its own voice through its hook:
+#                    planning  -> TRAVIS_VOICE_PLANNING, jenny  (SubagentStop, agent "Plan")
+#                    coding    -> TRAVIS_VOICE_CODING, ryan     (Stop)
+#                    security  -> TRAVIS_VOICE_SECURITY, alan   (SubagentStop, agent "code-security-auditor")
 #
 # Exit status is 0 only when every role was spoken in the expected voice.
 
@@ -28,12 +28,11 @@ unset TRAVIS_VOICE
 source "$SCRIPT_DIR/travis-config.sh"
 DEFAULT_VOICE="${TRAVIS_VOICE:-ryan}"
 
-# Format: "role:hook_event:agent_type:multi_voice:message"
-# multi_voice "default" means the project's default voice.
+# Format: "role:hook_event:agent_type:message". In multi mode the expected voice is the role's.
 ROLES=(
-    "planning:SubagentStop:Plan:amy:Planning is done."
-    "coding:Stop::default:Coding is done."
-    "security:SubagentStop:code-security-auditor:alan:Security review is done."
+    "planning:SubagentStop:Plan:Planning is done."
+    "coding:Stop::Coding is done."
+    "security:SubagentStop:code-security-auditor:Security review is done."
 )
 
 # Print the first stop-hook.sh command registered for <event> whose matcher matches <agent_type>.
@@ -59,21 +58,7 @@ sys.exit(1)
 PY
 }
 
-# Multi-voice when any SubagentStop hook speaks through stop-hook.sh.
-detect_mode() {
-    python3 - "$SETTINGS" <<'PY' 2>/dev/null
-import json, sys
-try:
-    hooks = json.load(open(sys.argv[1])).get("hooks", {})
-except Exception:
-    print("single"); sys.exit(0)
-multi = any("stop-hook.sh" in h.get("command", "")
-            for e in hooks.get("SubagentStop", []) for h in e.get("hooks", []))
-print("multi" if multi else "single")
-PY
-}
-
-MODE="${1:-$(detect_mode)}"
+MODE="${1:-$([ "${TRAVIS_MULTIVOICE:-off}" = "on" ] && echo multi || echo single)}"
 case "$MODE" in
     single|multi) ;;
     *) echo "Usage: testvoice.sh [single|multi]"; exit 2 ;;
@@ -92,7 +77,7 @@ echo ""
 
 failures=0
 for entry in "${ROLES[@]}"; do
-    IFS=: read -r role event agent multi_voice message <<< "$entry"
+    IFS=: read -r role event agent message <<< "$entry"
 
     if [ "$MODE" = "single" ]; then
         # Single voice: only the Stop hook speaks, always in the default voice.
@@ -100,7 +85,7 @@ for entry in "${ROLES[@]}"; do
         cmd="$STOP_CMD"
         event="Stop"
     else
-        [ "$multi_voice" = "default" ] && expected="$DEFAULT_VOICE" || expected="$multi_voice"
+        expected="$(TRAVIS_MULTIVOICE=on travis_role_voice "$role")"
         if [ "$event" = "Stop" ]; then
             cmd="$STOP_CMD"
         else
@@ -119,7 +104,8 @@ for entry in "${ROLES[@]}"; do
     message="$message This should be $expected speaking."
     json="$(python3 -c 'import json,sys; print(json.dumps({"hook_event_name": sys.argv[1], "agent_type": sys.argv[2], "last_assistant_message": sys.argv[3]}))' "$event" "$agent" "$message")"
     # Force speech on for the test: DND and the Stop-hook switch would otherwise silence it.
-    out="$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$SCRIPT_DIR" TRAVIS_QUIET_FROM= TRAVIS_QUIET_TO= TRAVIS_STOP_HOOK=on bash -c "$cmd" 2>&1)"
+    multivoice=off; [ "$MODE" = "multi" ] && multivoice=on
+    out="$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$SCRIPT_DIR" TRAVIS_QUIET_FROM= TRAVIS_QUIET_TO= TRAVIS_STOP_HOOK=on TRAVIS_MULTIVOICE="$multivoice" bash -c "$cmd" 2>&1)"
     heard="$(printf '%s' "$out" | sed -n 's/.*Announcing (\([^)]*\)).*/\1/p' | head -1)"
 
     if [ "$heard" = "$expected" ]; then

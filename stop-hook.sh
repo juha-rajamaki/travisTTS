@@ -10,6 +10,14 @@
 #   TRAVIS_STOP_HOOK=off          disable this hook entirely
 #   TRAVIS_STOP_MAX_CHARS=N       max characters spoken (default 300)
 #   TRAVIS_VOICE=ryan|amy|...     voice to use
+#   TRAVIS_MULTIVOICE=on          speak in the role's voice: the main session as coding (ryan),
+#                                 a Plan agent as planning (jenny), a security agent as security
+#                                 (alan). Wire subagents with a SubagentStop hook to this script.
+#
+# A TRAVIS_VOICE set on the hook command itself still wins over the role's voice.
+
+# Before the config is loaded, which merges the files' TRAVIS_VOICE into the same variable.
+CALLER_VOICE="${TRAVIS_VOICE-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=travis-config.sh
@@ -44,4 +52,19 @@ except Exception:
 
 [ -z "$MSG" ] && MSG="Done."
 
-"$SCRIPT_DIR/announce.sh" "$MSG" </dev/null
+AGENT_TYPE="$(printf '%s' "$HOOK_JSON" | python3 -c "
+import sys, json
+try:
+    print(str(json.load(sys.stdin).get('agent_type') or '')[:100])
+except Exception:
+    pass
+" 2>/dev/null)"
+
+VOICE="$CALLER_VOICE"
+[ -z "$VOICE" ] && VOICE="$(travis_role_voice "$(travis_role "$AGENT_TYPE")")"
+
+if [ -n "$VOICE" ]; then
+    "$SCRIPT_DIR/announce.sh" "$MSG" "$VOICE" </dev/null
+else
+    "$SCRIPT_DIR/announce.sh" "$MSG" </dev/null
+fi

@@ -64,18 +64,25 @@ Add these hooks to `~/.claude/settings.json` (global — works in every project 
 }
 ```
 
-### Optional: a different voice per subagent
+### Optional: multivoice — a voice per role
 
-Travis can speak a subagent's result in its own voice when that agent finishes, so you can tell by ear who is talking. Add a `SubagentStop` block next to the hooks above. `matcher` is a regex on the agent type, and the voice set in the command overrides any `travis.env`:
+Turn on `TRAVIS_MULTIVOICE=on` (in `~/.config/travis/travis.env` or a project's `.claude/travis.env`) and Travis speaks each role in its own voice, so you can tell by ear who is talking:
+
+| Role | Who | Default voice | Override |
+|------|-----|---------------|----------|
+| planning | `Plan` agent results | **jenny** | `TRAVIS_VOICE_PLANNING` |
+| coding | the main session (Stop hook, `claude-announce.sh`) | **ryan** | `TRAVIS_VOICE_CODING` |
+| security | security-audit agent results (any agent type containing "security") | **alan** | `TRAVIS_VOICE_SECURITY` |
+
+Subagents only speak when a `SubagentStop` hook runs `stop-hook.sh` for them; the role is read from the agent type, so no voice goes in the hook:
 
 ```json
 "SubagentStop": [
-  { "matcher": "^code-security-auditor$", "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=alan $HOME/tools/travisTTS/stop-hook.sh" }] },
-  { "matcher": "^Plan$",                  "hooks": [{ "type": "command", "command": "TRAVIS_VOICE=amy $HOME/tools/travisTTS/stop-hook.sh" }] }
+  { "matcher": "^(Plan|code-security-auditor)$", "hooks": [{ "type": "command", "command": "$HOME/tools/travisTTS/stop-hook.sh" }] }
 ]
 ```
 
-Use any agent type (`Explore`, `general-purpose`, your own agents) and any installed voice. Agents with no matching entry stay silent. The travisTTS repo itself ships this setup in its `.claude/settings.json`.
+`claude-announce.sh` speaks as coding; give it another role with `TRAVIS_ROLE=planning|security`. A `TRAVIS_VOICE=<name>` set on a hook command or in the shell still wins over the role's voice. With multivoice off, everything speaks in `TRAVIS_VOICE`. The travisTTS repo itself ships this setup in its `.claude/settings.json`.
 
 ---
 
@@ -143,17 +150,16 @@ Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.cl
 | `PostToolUse` | `waiting-nag.sh stop` | Keeps nagger silenced |
 | `Notification` | `waiting-nag.sh start` | Starts the idle nagger (Claude waiting for you) |
 | `Stop` | `stop-hook.sh` | Extracts `last_assistant_message` and speaks it |
-| `SubagentStop` (`code-security-auditor`) | `TRAVIS_VOICE=alan stop-hook.sh` | Speaks the security audit result in **alan's** voice, so security findings stand out from ryan (this repo's `.claude/settings.json`) |
-| `SubagentStop` (`Plan`) | `TRAVIS_VOICE=amy stop-hook.sh` | Speaks the plan summary in **amy's** voice when a Plan agent finishes (this repo's `.claude/settings.json`) |
+| `SubagentStop` (`Plan`, `code-security-auditor`) | `stop-hook.sh` | With `TRAVIS_MULTIVOICE=on`, speaks a plan summary in **jenny's** voice and a security audit in **alan's**, so they stand out from ryan (this repo's `.claude/settings.json`) |
 
 ---
 
 ## Script reference
 
 ### `testvoice.sh [single|multi]`
-Checks that each role is spoken in the right voice by running the real hooks from `.claude/settings.json` with simulated hook events. Each clip also says which voice should be speaking, so you can confirm by ear. With no argument it detects the mode from the settings.
+Checks that each role is spoken in the right voice by running the real hooks from `.claude/settings.json` with simulated hook events. Each clip also says which voice should be speaking, so you can confirm by ear. With no argument the mode follows `TRAVIS_MULTIVOICE`.
 - `single` — every role (planning, coding, security) is spoken by the Stop hook in the default voice (ryan)
-- `multi` — planning → amy, coding → ryan, security → alan
+- `multi` — planning → jenny, coding → ryan, security → alan (or the `TRAVIS_VOICE_*` overrides)
 
 Exits non-zero if any role is spoken in the wrong voice or has no hook.
 

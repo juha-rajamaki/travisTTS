@@ -11,14 +11,24 @@
 #   claude-announce.sh off       | disable       # turn announcements OFF
 #   claude-announce.sh status                    # print ON / OFF
 #
+# With TRAVIS_MULTIVOICE=on it speaks in the coding voice (ryan), or in another role's voice
+# with TRAVIS_ROLE=planning|security, e.g. TRAVIS_ROLE=planning claude-announce.sh "Plan ready."
+#
 # After each announcement, two nag repeats are scheduled:
 #   • 1st nag at 60 s
 #   • 2nd nag at 3 min (180 s after the first announcement)
 # Starting a new announcement cancels any pending nags.
 
+# Before the config is loaded, which merges the files' TRAVIS_VOICE into the same variable.
+CALLER_VOICE="${TRAVIS_VOICE-}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=travis-config.sh
 source "$SCRIPT_DIR/travis-config.sh"
+
+# A voice given on the command line wins; then the role's voice (multivoice); else the default.
+ROLE_VOICE="$CALLER_VOICE"
+[ -z "$ROLE_VOICE" ] && ROLE_VOICE="$(travis_role_voice "${TRAVIS_ROLE:-coding}")"
 
 STATE_FILE="$SCRIPT_DIR/.claude-announce-enabled"
 NAG_PID_FILE="$SCRIPT_DIR/.claude-announce-nag-pids"
@@ -41,7 +51,11 @@ kill_nags() {
 
 speak() {
     local msg="$1"
-    "$SCRIPT_DIR/announce.sh" "$msg"
+    if [ -n "$ROLE_VOICE" ]; then
+        "$SCRIPT_DIR/announce.sh" "$msg" "$ROLE_VOICE"
+    else
+        "$SCRIPT_DIR/announce.sh" "$msg"
+    fi
 }
 
 case "$1" in

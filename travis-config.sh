@@ -15,6 +15,10 @@
 #   TRAVIS_NAG=on|off                Idle waiting nagger (default: on)
 #   TRAVIS_ANNOUNCE=on|off           Manual claude-announce.sh (default: on)
 #   TRAVIS_VOICE=ryan|amy|alan|jenny|kristin  Default voice (default: ryan)
+#   TRAVIS_MULTIVOICE=on|off         A voice per role (default: off):
+#   TRAVIS_VOICE_PLANNING=jenny        planning — Plan agent results
+#   TRAVIS_VOICE_CODING=ryan           coding   — the main session (Stop hook, claude-announce.sh)
+#   TRAVIS_VOICE_SECURITY=alan         security — security-audit agent results
 #   TRAVIS_STOP_MAX_CHARS=N          Max chars spoken by Stop hook (default: 300)
 #   CLAUDE_NAG_INTERVALS="60 60 300" Nag schedule in seconds
 #   TRAVIS_QUIET_FROM=HH:MM          Start of do-not-disturb window (default: unset)
@@ -32,7 +36,7 @@ _travis_snapshot() {
 # Read a travis.env file WITHOUT executing it. The project lookup walks up from $CWD, so a
 # travis.env can come from any cloned repo; sourcing it would run that repo's shell code on
 # every hook. Only known keys with plain values are accepted, everything else is ignored.
-_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO'
+_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_MULTIVOICE|TRAVIS_VOICE_PLANNING|TRAVIS_VOICE_CODING|TRAVIS_VOICE_SECURITY|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO'
 _TRAVIS_LINE_RE="^[[:space:]]*(export[[:space:]]+)?($_TRAVIS_KEYS)=(.*)\$"
 _TRAVIS_DQ_RE='^"([^"]*)"'
 _TRAVIS_SQ_RE="^'([^']*)'"
@@ -63,6 +67,10 @@ _travis_load_config() {
     local _snap_NAG; _snap_NAG="$(_travis_snapshot TRAVIS_NAG)"
     local _snap_ANNOUNCE; _snap_ANNOUNCE="$(_travis_snapshot TRAVIS_ANNOUNCE)"
     local _snap_VOICE; _snap_VOICE="$(_travis_snapshot TRAVIS_VOICE)"
+    local _snap_MULTI; _snap_MULTI="$(_travis_snapshot TRAVIS_MULTIVOICE)"
+    local _snap_V_PLAN; _snap_V_PLAN="$(_travis_snapshot TRAVIS_VOICE_PLANNING)"
+    local _snap_V_CODE; _snap_V_CODE="$(_travis_snapshot TRAVIS_VOICE_CODING)"
+    local _snap_V_SEC;  _snap_V_SEC="$(_travis_snapshot TRAVIS_VOICE_SECURITY)"
     local _snap_MAX_CHARS; _snap_MAX_CHARS="$(_travis_snapshot TRAVIS_STOP_MAX_CHARS)"
     local _snap_INTERVALS; _snap_INTERVALS="$(_travis_snapshot CLAUDE_NAG_INTERVALS)"
     local _snap_QUIET_FROM; _snap_QUIET_FROM="$(_travis_snapshot TRAVIS_QUIET_FROM)"
@@ -93,6 +101,10 @@ _travis_load_config() {
     [ -n "$_snap_NAG"        ] && eval "$_snap_NAG"
     [ -n "$_snap_ANNOUNCE"   ] && eval "$_snap_ANNOUNCE"
     [ -n "$_snap_VOICE"      ] && eval "$_snap_VOICE"
+    [ -n "$_snap_MULTI"      ] && eval "$_snap_MULTI"
+    [ -n "$_snap_V_PLAN"     ] && eval "$_snap_V_PLAN"
+    [ -n "$_snap_V_CODE"     ] && eval "$_snap_V_CODE"
+    [ -n "$_snap_V_SEC"      ] && eval "$_snap_V_SEC"
     [ -n "$_snap_MAX_CHARS"  ] && eval "$_snap_MAX_CHARS"
     [ -n "$_snap_INTERVALS"  ] && eval "$_snap_INTERVALS"
     [ -n "$_snap_QUIET_FROM" ] && eval "$_snap_QUIET_FROM"
@@ -100,6 +112,29 @@ _travis_load_config() {
 }
 
 _travis_load_config
+
+# travis_role — the role an agent type speaks for: planning, security, or coding (the main
+# session, no agent type). Prints nothing for any other subagent.
+travis_role() {
+    local agent
+    agent="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+    case "$agent" in
+        "")         echo coding ;;
+        *security*) echo security ;;
+        plan|*planner*|*planning*) echo planning ;;
+    esac
+}
+
+# travis_role_voice <role> — the voice for a role when TRAVIS_MULTIVOICE=on; nothing when it is
+# off (or the role is unknown), meaning "use the default voice".
+travis_role_voice() {
+    [ "${TRAVIS_MULTIVOICE:-off}" = "on" ] || return 0
+    case "$1" in
+        planning) echo "${TRAVIS_VOICE_PLANNING:-jenny}" ;;
+        coding)   echo "${TRAVIS_VOICE_CODING:-ryan}" ;;
+        security) echo "${TRAVIS_VOICE_SECURITY:-alan}" ;;
+    esac
+}
 
 # travis_is_quiet — returns 0 (true) if current time is inside the DND window.
 # Handles overnight windows (e.g. 22:00–08:00) correctly.
