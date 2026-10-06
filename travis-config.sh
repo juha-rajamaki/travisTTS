@@ -19,6 +19,8 @@
 #   CLAUDE_NAG_INTERVALS="60 60 300" Nag schedule in seconds
 #   TRAVIS_QUIET_FROM=HH:MM          Start of do-not-disturb window (default: unset)
 #   TRAVIS_QUIET_TO=HH:MM            End of do-not-disturb window (default: unset)
+#   TRAVIS_ACTIVE_FROM=HH:MM         Start of active hours; speech only inside (default: unset = always)
+#   TRAVIS_ACTIVE_TO=HH:MM           End of active hours (default: unset = always)
 
 # Snapshot a variable if it is set. Outputs an eval-able assignment or nothing.
 _travis_snapshot() {
@@ -32,7 +34,7 @@ _travis_snapshot() {
 # Read a travis.env file WITHOUT executing it. The project lookup walks up from $CWD, so a
 # travis.env can come from any cloned repo; sourcing it would run that repo's shell code on
 # every hook. Only known keys with plain values are accepted, everything else is ignored.
-_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO'
+_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO|TRAVIS_ACTIVE_FROM|TRAVIS_ACTIVE_TO'
 _TRAVIS_LINE_RE="^[[:space:]]*(export[[:space:]]+)?($_TRAVIS_KEYS)=(.*)\$"
 _TRAVIS_DQ_RE='^"([^"]*)"'
 _TRAVIS_SQ_RE="^'([^']*)'"
@@ -67,6 +69,8 @@ _travis_load_config() {
     local _snap_INTERVALS; _snap_INTERVALS="$(_travis_snapshot CLAUDE_NAG_INTERVALS)"
     local _snap_QUIET_FROM; _snap_QUIET_FROM="$(_travis_snapshot TRAVIS_QUIET_FROM)"
     local _snap_QUIET_TO;   _snap_QUIET_TO="$(_travis_snapshot TRAVIS_QUIET_TO)"
+    local _snap_ACTIVE_FROM; _snap_ACTIVE_FROM="$(_travis_snapshot TRAVIS_ACTIVE_FROM)"
+    local _snap_ACTIVE_TO;   _snap_ACTIVE_TO="$(_travis_snapshot TRAVIS_ACTIVE_TO)"
 
     # 1. Global user config
     local global_env="$HOME/.config/travis/travis.env"
@@ -97,23 +101,47 @@ _travis_load_config() {
     [ -n "$_snap_INTERVALS"  ] && eval "$_snap_INTERVALS"
     [ -n "$_snap_QUIET_FROM" ] && eval "$_snap_QUIET_FROM"
     [ -n "$_snap_QUIET_TO"   ] && eval "$_snap_QUIET_TO"
+    [ -n "$_snap_ACTIVE_FROM" ] && eval "$_snap_ACTIVE_FROM"
+    [ -n "$_snap_ACTIVE_TO"   ] && eval "$_snap_ACTIVE_TO"
 }
 
 _travis_load_config
 
-# travis_is_quiet — returns 0 (true) if current time is inside the DND window.
-# Handles overnight windows (e.g. 22:00–08:00) correctly.
-travis_is_quiet() {
-    [ -z "${TRAVIS_QUIET_FROM:-}" ] || [ -z "${TRAVIS_QUIET_TO:-}" ] && return 1
-    local now from to
-    now="$(date +%H%M)"
-    from="${TRAVIS_QUIET_FROM/:/}"   # "22:00" -> "2200"
-    to="${TRAVIS_QUIET_TO/:/}"       # "08:00" -> "0800"
+# _travis_hhmm <HH:MM> — prints minutes since midnight, or fails if not a valid 24h time.
+# Strict parsing: a value like "8am" or "25:00" must not be silently compared as a number.
+_travis_hhmm() {
+    [[ "$1" =~ ^([01]?[0-9]|2[0-3]):([0-5][0-9])$ ]] || return 1
+    echo $(( 10#${BASH_REMATCH[1]} * 60 + 10#${BASH_REMATCH[2]} ))
+}
+
+# _travis_in_window <FROM> <TO> — returns 0 if the current time is in [FROM, TO).
+# Handles overnight windows (e.g. 22:00–08:00); FROM == TO covers the whole day.
+# Returns 2 if either bound is missing or invalid, so callers can treat the window as unset.
+_travis_in_window() {
+    local from to now
+    from="$(_travis_hhmm "${1:-}")" || return 2
+    to="$(_travis_hhmm "${2:-}")"   || return 2
+    now="$(_travis_hhmm "$(date +%H:%M)")" || return 2
     if [ "$from" -lt "$to" ]; then
-        # Same-day window e.g. 09:00-17:00
         [ "$now" -ge "$from" ] && [ "$now" -lt "$to" ]
     else
-        # Overnight window e.g. 22:00-08:00
         [ "$now" -ge "$from" ] || [ "$now" -lt "$to" ]
     fi
+}
+
+# travis_is_quiet — returns 0 (true) if current time is inside the DND window.
+travis_is_quiet() {
+    _travis_in_window "${TRAVIS_QUIET_FROM:-}" "${TRAVIS_QUIET_TO:-}"
+}
+
+# travis_active_hours_set — returns 0 if a valid active-hours window is configured.
+travis_active_hours_set() {
+    _travis_hhmm "${TRAVIS_ACTIVE_FROM:-}" >/dev/null && _travis_hhmm "${TRAVIS_ACTIVE_TO:-}" >/dev/null
+}
+
+# travis_is_active — returns 0 (true) if Travis may speak now according to active hours.
+# With no (or an invalid) active-hours window configured, Travis is always active.
+travis_is_active() {
+    travis_active_hours_set || return 0
+    _travis_in_window "$TRAVIS_ACTIVE_FROM" "$TRAVIS_ACTIVE_TO"
 }

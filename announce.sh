@@ -20,6 +20,14 @@ if travis_is_quiet; then
     exit 0
 fi
 
+if [ -n "${TRAVIS_ACTIVE_FROM:-}${TRAVIS_ACTIVE_TO:-}" ] && ! travis_active_hours_set; then
+    echo "Warning: active hours ignored, need valid HH:MM for both TRAVIS_ACTIVE_FROM and TRAVIS_ACTIVE_TO" >&2
+fi
+if ! travis_is_active; then
+    echo "Outside active hours (${TRAVIS_ACTIVE_FROM}–${TRAVIS_ACTIVE_TO}): $MESSAGE"
+    exit 0
+fi
+
 # Available voices (model files live in ~/.local/share/piper/voices/):
 #   ryan    - en_US-ryan-high.onnx    (default)
 #   amy     - en_US-amy-medium.onnx

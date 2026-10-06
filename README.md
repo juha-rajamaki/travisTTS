@@ -109,7 +109,19 @@ TRAVIS_STOP_MAX_CHARS=300
 
 # Nag schedule: space-separated seconds between reminders
 CLAUDE_NAG_INTERVALS="60 60 60 300 300 300"
+
+# Active hours: speak ONLY between these times (24h HH:MM). Unset (default) = always.
+#TRAVIS_ACTIVE_FROM=08:00
+#TRAVIS_ACTIVE_TO=18:00
+
+# Do-not-disturb: never speak between these times (24h HH:MM). Unset (default) = off.
+#TRAVIS_QUIET_FROM=22:00
+#TRAVIS_QUIET_TO=08:00
 ```
+
+### Active hours
+
+By default Travis speaks at any time. Set `TRAVIS_ACTIVE_FROM` and `TRAVIS_ACTIVE_TO` to limit speech to a window, e.g. working hours. Outside the window every announcement (Stop hook, "On it.", nagger, `travis "..."`) is skipped and only printed. Overnight windows such as `20:00`–`02:00` work, and do-not-disturb still applies inside active hours. Both values must be valid `HH:MM`; if either is missing or invalid, active hours are ignored. Equal start and end times (e.g. `09:00`–`09:00`) mean the whole day. `travis-status.sh` shows whether Travis is speaking right now.
 
 ---
 

@@ -49,6 +49,20 @@ dnd_status() {
     fi
 }
 
+active_status() {
+    if ! travis_active_hours_set; then
+        if [ -n "${TRAVIS_ACTIVE_FROM:-}${TRAVIS_ACTIVE_TO:-}" ]; then
+            echo "not set — invalid value (${TRAVIS_ACTIVE_FROM:-?}–${TRAVIS_ACTIVE_TO:-?}), use HH:MM"
+        else
+            echo "not set (always speaks)"
+        fi
+    elif travis_is_active; then
+        echo "speaking now (${TRAVIS_ACTIVE_FROM}–${TRAVIS_ACTIVE_TO})"
+    else
+        echo "SILENT now (${TRAVIS_ACTIVE_FROM}–${TRAVIS_ACTIVE_TO})"
+    fi
+}
+
 # ── Resolve effective feature states ─────────────────────────────────────────
 
 # Each feature can be off via travis.env OR via its legacy state file.
@@ -88,6 +102,7 @@ echo "Travis TTS — status"
 echo "════════════════════════════════════════"
 echo ""
 printf "  %-22s %s\n" "Voice:"         "${TRAVIS_VOICE:-ryan}"
+printf "  %-22s %s\n" "Active hours:"   "$(active_status)"
 printf "  %-22s %s\n" "Do-not-disturb:" "$(dnd_status)"
 echo ""
 printf "  %-22s %s\n" "Stop hook:"     "$(on_off "$stop_hook_state")  (speak when Claude finishes)"
