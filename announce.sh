@@ -88,6 +88,12 @@ if [ -f "$AFPLAY_PID_FILE" ]; then
     rm -f "$AFPLAY_PID_FILE"
 fi
 
+# Older versions used a flock file at the same path; a leftover plain file would make
+# mkdir fail forever, so remove it (only if it's ours and not a directory or symlink).
+if [ -e "$LOCK_DIR" ] && [ ! -d "$LOCK_DIR" ] && [ ! -L "$LOCK_DIR" ] && [ -O "$LOCK_DIR" ]; then
+    rm -f "$LOCK_DIR"
+fi
+
 # Acquire mkdir lock (works on macOS + Linux, no flock needed).
 _lock_acquired=0
 _lock_deadline=$(( $(date +%s) + LOCK_WAIT ))
