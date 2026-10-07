@@ -14,7 +14,11 @@
 #   TRAVIS_START_WORK=on|off         "On it." on task start (default: on)
 #   TRAVIS_NAG=on|off                Idle waiting nagger (default: on)
 #   TRAVIS_ANNOUNCE=on|off           Manual claude-announce.sh (default: on)
-#   TRAVIS_VOICE=ryan|amy|alan|jenny|kristin  Default voice (default: ryan)
+#   TRAVIS_VOICE=ryan|amy|alan|jenny|kristin  Default voice for all hooks (default: ryan)
+#   TRAVIS_STOP_VOICE=<voice>        Override voice for Stop hook (falls back to TRAVIS_VOICE)
+#   TRAVIS_NAG_VOICE=<voice>         Override voice for waiting nagger (falls back to TRAVIS_VOICE)
+#   TRAVIS_START_VOICE=<voice>       Override voice for "On it." (falls back to TRAVIS_VOICE)
+#   TRAVIS_DEPLOY_VOICE=<voice>      Override voice for deploy/publish announcements (falls back to TRAVIS_VOICE)
 #   TRAVIS_STOP_MAX_CHARS=N          Max chars spoken by Stop hook (default: 300)
 #   CLAUDE_NAG_INTERVALS="60 60 300" Nag schedule in seconds
 #   TRAVIS_QUIET_FROM=HH:MM          Start of do-not-disturb window (default: unset)
@@ -34,7 +38,7 @@ _travis_snapshot() {
 # Read a travis.env file WITHOUT executing it. The project lookup walks up from $CWD, so a
 # travis.env can come from any cloned repo; sourcing it would run that repo's shell code on
 # every hook. Only known keys with plain values are accepted, everything else is ignored.
-_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO|TRAVIS_ACTIVE_FROM|TRAVIS_ACTIVE_TO'
+_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_VOICE|TRAVIS_NAG_VOICE|TRAVIS_START_VOICE|TRAVIS_DEPLOY_VOICE|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO|TRAVIS_ACTIVE_FROM|TRAVIS_ACTIVE_TO'
 _TRAVIS_LINE_RE="^[[:space:]]*(export[[:space:]]+)?($_TRAVIS_KEYS)=(.*)\$"
 _TRAVIS_DQ_RE='^"([^"]*)"'
 _TRAVIS_SQ_RE="^'([^']*)'"
@@ -65,6 +69,10 @@ _travis_load_config() {
     local _snap_NAG; _snap_NAG="$(_travis_snapshot TRAVIS_NAG)"
     local _snap_ANNOUNCE; _snap_ANNOUNCE="$(_travis_snapshot TRAVIS_ANNOUNCE)"
     local _snap_VOICE; _snap_VOICE="$(_travis_snapshot TRAVIS_VOICE)"
+    local _snap_STOP_VOICE; _snap_STOP_VOICE="$(_travis_snapshot TRAVIS_STOP_VOICE)"
+    local _snap_NAG_VOICE; _snap_NAG_VOICE="$(_travis_snapshot TRAVIS_NAG_VOICE)"
+    local _snap_START_VOICE; _snap_START_VOICE="$(_travis_snapshot TRAVIS_START_VOICE)"
+    local _snap_DEPLOY_VOICE; _snap_DEPLOY_VOICE="$(_travis_snapshot TRAVIS_DEPLOY_VOICE)"
     local _snap_MAX_CHARS; _snap_MAX_CHARS="$(_travis_snapshot TRAVIS_STOP_MAX_CHARS)"
     local _snap_INTERVALS; _snap_INTERVALS="$(_travis_snapshot CLAUDE_NAG_INTERVALS)"
     local _snap_QUIET_FROM; _snap_QUIET_FROM="$(_travis_snapshot TRAVIS_QUIET_FROM)"
@@ -96,8 +104,12 @@ _travis_load_config() {
     [ -n "$_snap_START_WORK" ] && eval "$_snap_START_WORK"
     [ -n "$_snap_NAG"        ] && eval "$_snap_NAG"
     [ -n "$_snap_ANNOUNCE"   ] && eval "$_snap_ANNOUNCE"
-    [ -n "$_snap_VOICE"      ] && eval "$_snap_VOICE"
-    [ -n "$_snap_MAX_CHARS"  ] && eval "$_snap_MAX_CHARS"
+    [ -n "$_snap_VOICE"       ] && eval "$_snap_VOICE"
+    [ -n "$_snap_STOP_VOICE"  ] && eval "$_snap_STOP_VOICE"
+    [ -n "$_snap_NAG_VOICE"   ] && eval "$_snap_NAG_VOICE"
+    [ -n "$_snap_START_VOICE"  ] && eval "$_snap_START_VOICE"
+    [ -n "$_snap_DEPLOY_VOICE" ] && eval "$_snap_DEPLOY_VOICE"
+    [ -n "$_snap_MAX_CHARS"   ] && eval "$_snap_MAX_CHARS"
     [ -n "$_snap_INTERVALS"  ] && eval "$_snap_INTERVALS"
     [ -n "$_snap_QUIET_FROM" ] && eval "$_snap_QUIET_FROM"
     [ -n "$_snap_QUIET_TO"   ] && eval "$_snap_QUIET_TO"

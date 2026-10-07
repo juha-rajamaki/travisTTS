@@ -29,12 +29,19 @@ if ! travis_is_active; then
 fi
 
 # Available voices (model files live in ~/.local/share/piper/voices/):
-#   ryan    - en_US-ryan-high.onnx    (default)
-#   amy     - en_US-amy-medium.onnx
-#   alan    - en_GB-alan-medium.onnx
-#   jenny   - en_GB-jenny_dioco-medium.onnx
-#   kristin - en_US-kristin-medium.onnx
-#   samuel  - alias for ryan (back-compat)
+#   ryan       - en_US-ryan-high.onnx    (default)
+#   amy        - en_US-amy-medium.onnx
+#   lessac     - en_US-lessac-medium.onnx
+#   bryce      - en_US-bryce-medium.onnx
+#   joe        - en_US-joe-medium.onnx
+#   john       - en_US-john-medium.onnx
+#   hfc_female - en_US-hfc_female-medium.onnx
+#   kristin    - en_US-kristin-medium.onnx
+#   alan       - en_GB-alan-medium.onnx
+#   jenny      - en_GB-jenny_dioco-medium.onnx
+#   cori       - en_GB-cori-high.onnx
+#   alba       - en_GB-alba-medium.onnx
+#   samuel     - alias for ryan (back-compat)
 
 VOICE_DIR="${HOME}/.local/share/piper/voices"
 PLAY_RATE="22050"
@@ -50,6 +57,26 @@ case "$VOICE" in
         MODEL_FILE="$VOICE_DIR/en_US-amy-medium.onnx"
         VOICE_NAME="amy"
         ;;
+    "lessac")
+        MODEL_FILE="$VOICE_DIR/en_US-lessac-medium.onnx"
+        VOICE_NAME="lessac"
+        ;;
+    "bryce")
+        MODEL_FILE="$VOICE_DIR/en_US-bryce-medium.onnx"
+        VOICE_NAME="bryce"
+        ;;
+    "joe")
+        MODEL_FILE="$VOICE_DIR/en_US-joe-medium.onnx"
+        VOICE_NAME="joe"
+        ;;
+    "john")
+        MODEL_FILE="$VOICE_DIR/en_US-john-medium.onnx"
+        VOICE_NAME="john"
+        ;;
+    "hfc_female")
+        MODEL_FILE="$VOICE_DIR/en_US-hfc_female-medium.onnx"
+        VOICE_NAME="hfc_female"
+        ;;
     "3"|"alan")
         MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"
         VOICE_NAME="alan"
@@ -57,6 +84,14 @@ case "$VOICE" in
     "4"|"jenny")
         MODEL_FILE="$VOICE_DIR/en_GB-jenny_dioco-medium.onnx"
         VOICE_NAME="jenny"
+        ;;
+    "cori")
+        MODEL_FILE="$VOICE_DIR/en_GB-cori-high.onnx"
+        VOICE_NAME="cori"
+        ;;
+    "alba")
+        MODEL_FILE="$VOICE_DIR/en_GB-alba-medium.onnx"
+        VOICE_NAME="alba"
         ;;
     "5"|"kristin")
         MODEL_FILE="$VOICE_DIR/en_US-kristin-medium.onnx"
