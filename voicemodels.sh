@@ -31,8 +31,8 @@ voice_intro() {
         cori)    echo "Hello, I'm Cori. I'm available as a voice for your Travis announcements." ;;
         joe)     echo "Hi, I'm Joe. I'm the deployment voice — I announce when your code has been deployed or published." ;;
         kristin) echo "Hi, I'm Kristin. I'm available as a voice for your Travis announcements." ;;
-        jenny)   echo "Hi, I'm Jenny. I'm available as a voice for your Travis announcements." ;;
-        alba)    echo "Hello, I'm Alba. I'm the planning voice — I announce when a plan is ready for you to review." ;;
+        jenny)   echo "Hi, I'm Jenny. I'm the planning voice — I announce when a plan is ready for you to review." ;;
+        alba)    echo "Hello, I'm Alba. I'm available as a voice for your Travis announcements." ;;
         *)       echo "Hello, I am $1. I can be your Travis voice." ;;
     esac
 }
