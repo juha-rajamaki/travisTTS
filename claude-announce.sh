@@ -12,7 +12,7 @@
 #   claude-announce.sh status                    # print ON / OFF
 #
 # With TRAVIS_MULTIVOICE=on it speaks in the coding voice (ryan), or in another role's voice
-# with TRAVIS_ROLE=planning|security, e.g. TRAVIS_ROLE=planning claude-announce.sh "Plan ready."
+# with TRAVIS_ROLE=planning|security|deploy, e.g. TRAVIS_ROLE=planning claude-announce.sh "Plan ready."
 #
 # After each announcement, two nag repeats are scheduled:
 #   • 1st nag at 60 s

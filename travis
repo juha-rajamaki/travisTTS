@@ -4,21 +4,33 @@
 #
 # Usage:
 #   travis "message"              speak with configured voice
-#   travis <number> "message"     speak with a specific voice (1=ryan 2=amy 3=alan 4=jenny 5=kristin)
+#   travis <number> "message"     speak with a specific voice (1=ryan 2=amy 3=alan 4=jenny 5=kristin 6=joe)
 #   travis intro                  play each installed voice saying their introduction line
 #   travis intro <name>           play one voice's introduction (e.g. travis intro alan)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-VOICE_NAMES=(ryan amy alan jenny kristin)
+VOICE_NAMES=(ryan amy alan jenny kristin joe)
 
+# shellcheck source=travis-config.sh
+source "$SCRIPT_DIR/travis-config.sh"
+
+# With multivoice on, a voice that speaks for a role introduces itself by that role.
 voice_intro_line() {
+    local cap; cap="$(printf '%s' "${1:0:1}" | tr '[:lower:]' '[:upper:]')${1:1}"   # bash 3 (macOS) has no $cap
+    case "$(travis_voice_role "$1")" in
+        planning) echo "Hi, I'm $cap, the planning voice. I tell you when a plan is ready for you to review." ; return ;;
+        coding)   echo "Hi, I'm $cap, the coding voice. I announce when Claude finishes a task, and remind you when Claude is waiting on you." ; return ;;
+        security) echo "Hello, I'm $cap, the security voice. I report the findings when the security auditor has reviewed the code." ; return ;;
+        deploy)   echo "Hi, I'm $cap, the deployment voice. I tell you when something has been deployed or published." ; return ;;
+    esac
     case "$1" in
         ryan)    echo "Hi, I'm Ryan — your default voice. I announce when Claude finishes a task." ;;
-        amy)     echo "Hi, I'm Amy. I speak up when the Plan agent has finished laying out an implementation plan for you." ;;
-        alan)    echo "Hello, I'm Alan. I report the findings whenever the security auditor has reviewed your code." ;;
+        amy)     echo "Hi, I'm Amy. I can be your Travis voice." ;;
+        alan)    echo "Hello, I'm Alan. I can be your Travis voice." ;;
         jenny)   echo "Hi, I'm Jenny. I can be your Travis voice." ;;
         kristin) echo "Hi, I'm Kristin. I can be your Travis voice." ;;
+        joe)     echo "Hi, I'm Joe. I can be your Travis voice." ;;
         *)       echo "Hello, I am $1. I can be your Travis voice." ;;
     esac
 }
@@ -39,6 +51,7 @@ voice_installed() {
         alan)    model_ok "$VOICE_DIR/en_GB-alan-medium.onnx" ;;
         jenny)   model_ok "$VOICE_DIR/en_GB-jenny_dioco-medium.onnx" ;;
         kristin) model_ok "$VOICE_DIR/en_US-kristin-medium.onnx" ;;
+        joe)     model_ok "$VOICE_DIR/en_US-joe-medium.onnx" ;;
         *)       false ;;
     esac
 }
@@ -58,11 +71,23 @@ if [ "${1:-}" = "intro" ]; then
         echo ""
         echo "Travis TTS — voice introductions"
         echo "════════════════════════════════"
+        printf "  %-10s %-8s %s\n" "ROLE" "VOICE" "SAYS"
         echo ""
+        # Role voices first (planning, coding, security, deploy), then the others.
+        ordered=()
+        for role in planning coding security deploy; do
+            v="$(travis_role_voice "$role")"
+            [ -n "$v" ] && ordered+=("$v")
+        done
         for name in "${VOICE_NAMES[@]}"; do
+            [[ " ${ordered[*]} " == *" $name "* ]] || ordered+=("$name")
+        done
+        for name in "${ordered[@]}"; do
             if voice_installed "$name"; then
-                printf "  [%s]\n" "$name"
-                "$SCRIPT_DIR/announce.sh" "$(voice_intro_line "$name")" "$name"
+                role="$(travis_voice_role "$name")"
+                line="$(voice_intro_line "$name")"
+                printf "  %-10s %-8s %s\n" "${role:--}" "$name" "$line"
+                "$SCRIPT_DIR/announce.sh" "$line" "$name" >/dev/null
             else
                 printf "  [%s]  not installed — run: voicemodels.sh --download %s\n" "$name" "$name"
             fi

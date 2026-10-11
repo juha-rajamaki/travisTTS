@@ -8,3 +8,4 @@
 .claude-announce-nag-pids
 /tmp/announce_speech.*.wav
 .start-work-armed
+.announce.log

@@ -18,6 +18,7 @@ VOICE_ENTRIES=(
     "alan:en_GB-alan-medium.onnx:en/en_GB/alan/medium"
     "jenny:en_GB-jenny_dioco-medium.onnx:en/en_GB/jenny_dioco/medium"
     "kristin:en_US-kristin-medium.onnx:en/en_US/kristin/medium"
+    "joe:en_US-joe-medium.onnx:en/en_US/joe/medium"
 )
 
 voice_intro() {
@@ -27,6 +28,7 @@ voice_intro() {
         alan)    echo "Hello, I'm Alan. I report the findings whenever the security auditor has reviewed your code." ;;
         jenny)   echo "Hi, I'm Jenny. I can be your Travis voice." ;;
         kristin) echo "Hi, I'm Kristin. I can be your Travis voice." ;;
+        joe)     echo "Hi, I'm Joe. I announce deployments and publishes." ;;
         *)       echo "Hello, I am $1. I can be your Travis voice." ;;
     esac
 }
@@ -108,7 +110,7 @@ if [ "$1" = "--download" ]; then
         done
         if [ "$found" -eq 0 ]; then
             echo "Unknown voice: $target"
-            echo "Available: ryan, amy, alan, jenny, kristin"
+            echo "Available: ryan, amy, alan, jenny, kristin, joe"
             exit 1
         fi
     fi

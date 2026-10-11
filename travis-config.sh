@@ -14,11 +14,12 @@
 #   TRAVIS_START_WORK=on|off         "On it." on task start (default: on)
 #   TRAVIS_NAG=on|off                Idle waiting nagger (default: on)
 #   TRAVIS_ANNOUNCE=on|off           Manual claude-announce.sh (default: on)
-#   TRAVIS_VOICE=ryan|amy|alan|jenny|kristin  Default voice (default: ryan)
+#   TRAVIS_VOICE=ryan|amy|alan|jenny|kristin|joe  Default voice (default: ryan)
 #   TRAVIS_MULTIVOICE=on|off         A voice per role (default: off):
 #   TRAVIS_VOICE_PLANNING=jenny        planning — Plan agent results
 #   TRAVIS_VOICE_CODING=ryan           coding   — the main session (Stop hook, claude-announce.sh)
 #   TRAVIS_VOICE_SECURITY=alan         security — security-audit agent results
+#   TRAVIS_VOICE_DEPLOY=joe            deploy   — web deploys and app publishes (TRAVIS_ROLE=deploy)
 #   TRAVIS_STOP_MAX_CHARS=N          Max chars spoken by Stop hook (default: 300)
 #   CLAUDE_NAG_INTERVALS="60 60 300" Nag schedule in seconds
 #   TRAVIS_QUIET_FROM=HH:MM          Start of do-not-disturb window (default: unset)
@@ -36,7 +37,7 @@ _travis_snapshot() {
 # Read a travis.env file WITHOUT executing it. The project lookup walks up from $CWD, so a
 # travis.env can come from any cloned repo; sourcing it would run that repo's shell code on
 # every hook. Only known keys with plain values are accepted, everything else is ignored.
-_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_MULTIVOICE|TRAVIS_VOICE_PLANNING|TRAVIS_VOICE_CODING|TRAVIS_VOICE_SECURITY|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO'
+_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_MULTIVOICE|TRAVIS_VOICE_PLANNING|TRAVIS_VOICE_CODING|TRAVIS_VOICE_SECURITY|TRAVIS_VOICE_DEPLOY|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO'
 _TRAVIS_LINE_RE="^[[:space:]]*(export[[:space:]]+)?($_TRAVIS_KEYS)=(.*)\$"
 _TRAVIS_DQ_RE='^"([^"]*)"'
 _TRAVIS_SQ_RE="^'([^']*)'"
@@ -71,6 +72,7 @@ _travis_load_config() {
     local _snap_V_PLAN; _snap_V_PLAN="$(_travis_snapshot TRAVIS_VOICE_PLANNING)"
     local _snap_V_CODE; _snap_V_CODE="$(_travis_snapshot TRAVIS_VOICE_CODING)"
     local _snap_V_SEC;  _snap_V_SEC="$(_travis_snapshot TRAVIS_VOICE_SECURITY)"
+    local _snap_V_DEP;  _snap_V_DEP="$(_travis_snapshot TRAVIS_VOICE_DEPLOY)"
     local _snap_MAX_CHARS; _snap_MAX_CHARS="$(_travis_snapshot TRAVIS_STOP_MAX_CHARS)"
     local _snap_INTERVALS; _snap_INTERVALS="$(_travis_snapshot CLAUDE_NAG_INTERVALS)"
     local _snap_QUIET_FROM; _snap_QUIET_FROM="$(_travis_snapshot TRAVIS_QUIET_FROM)"
@@ -105,6 +107,7 @@ _travis_load_config() {
     [ -n "$_snap_V_PLAN"     ] && eval "$_snap_V_PLAN"
     [ -n "$_snap_V_CODE"     ] && eval "$_snap_V_CODE"
     [ -n "$_snap_V_SEC"      ] && eval "$_snap_V_SEC"
+    [ -n "$_snap_V_DEP"      ] && eval "$_snap_V_DEP"
     [ -n "$_snap_MAX_CHARS"  ] && eval "$_snap_MAX_CHARS"
     [ -n "$_snap_INTERVALS"  ] && eval "$_snap_INTERVALS"
     [ -n "$_snap_QUIET_FROM" ] && eval "$_snap_QUIET_FROM"
@@ -133,7 +136,18 @@ travis_role_voice() {
         planning) echo "${TRAVIS_VOICE_PLANNING:-jenny}" ;;
         coding)   echo "${TRAVIS_VOICE_CODING:-ryan}" ;;
         security) echo "${TRAVIS_VOICE_SECURITY:-alan}" ;;
+        deploy)   echo "${TRAVIS_VOICE_DEPLOY:-joe}" ;;
     esac
+}
+
+# travis_voice_role <voice> — which role speaks in this voice when TRAVIS_MULTIVOICE=on, for the
+# text shown alongside the speech. Nothing when multivoice is off or no role uses the voice.
+travis_voice_role() {
+    [ "${TRAVIS_MULTIVOICE:-off}" = "on" ] || return 0
+    local role
+    for role in planning coding security deploy; do
+        [ "$(travis_role_voice "$role")" = "$1" ] && { echo "$role"; return 0; }
+    done
 }
 
 # travis_is_quiet — returns 0 (true) if current time is inside the DND window.

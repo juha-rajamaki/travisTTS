@@ -15,10 +15,6 @@ source "$SCRIPT_DIR/travis-config.sh"
 # `travis 3 "..."` or the voicemodels.sh demo is honoured.
 VOICE="${2:-${TRAVIS_VOICE:-ryan}}"
 
-if travis_is_quiet; then
-    echo "DND (${TRAVIS_QUIET_FROM}–${TRAVIS_QUIET_TO}): $MESSAGE"
-    exit 0
-fi
 
 # Available voices (model files live in ~/.local/share/piper/voices/):
 #   ryan    - en_US-ryan-high.onnx    (default)
@@ -26,10 +22,12 @@ fi
 #   alan    - en_GB-alan-medium.onnx
 #   jenny   - en_GB-jenny_dioco-medium.onnx
 #   kristin - en_US-kristin-medium.onnx
+#   joe     - en_US-joe-medium.onnx
 #   samuel  - alias for ryan (back-compat)
 
 VOICE_DIR="${HOME}/.local/share/piper/voices"
 PLAY_RATE="22050"
+LENGTH_SCALE="1"   # piper's speaking pace: above 1 is slower
 
 case "$VOICE" in
     "1"|"ryan"|"samuel"|"sam")
@@ -54,6 +52,10 @@ case "$VOICE" in
         MODEL_FILE="$VOICE_DIR/en_US-kristin-medium.onnx"
         VOICE_NAME="kristin"
         ;;
+    "6"|"joe")
+        MODEL_FILE="$VOICE_DIR/en_US-joe-medium.onnx"
+        VOICE_NAME="joe"
+        ;;
     *)
         MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
         [ -f "$MODEL_FILE" ] || MODEL_FILE="$VOICE_DIR/en_US-ryan-medium.onnx"
@@ -61,6 +63,16 @@ case "$VOICE" in
         VOICE_NAME="ryan"
         ;;
 esac
+
+# The text printed with the speech names the role as well as the voice: "[coding · ryan]".
+SPEAKER="$VOICE_NAME"
+_role="$(travis_voice_role "$VOICE_NAME")"
+[ -n "$_role" ] && SPEAKER="$_role · $VOICE_NAME"
+
+if travis_is_quiet; then
+    echo "DND (${TRAVIS_QUIET_FROM}–${TRAVIS_QUIET_TO}) [$SPEAKER]: $MESSAGE"
+    exit 0
+fi
 
 # ── One voice at a time ──────────────────────────────────────────────────────
 # Announcements can overlap (nag fires on its own timer). Two at once COLLIDE —
@@ -133,15 +145,21 @@ if [ ! -s "$MODEL_FILE" ]; then
     done
 fi
 
+# One line per announcement: which player spoke it. Rarely a line plays at several times normal
+# speed; the log tells whether those went through Windows or the Linux (WSLg) fallback.
+PLAY_LOG="$SCRIPT_DIR/.announce.log"
+log_play() { printf '%s  %-8s %-11s %s\n' "$(date '+%F %T')" "$VOICE_NAME" "$1" "${MESSAGE:0:60}" >> "$PLAY_LOG" 2>/dev/null; }
+
 # ── Speak ────────────────────────────────────────────────────────────────────
 if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
-    echo "Announcing ($VOICE_NAME): $MESSAGE"
+    echo "Announcing [$SPEAKER]: $MESSAGE"
     WAV="$(mktemp "${TMPDIR:-/tmp}/announce_speech.XXXXXX")" || WAV="/tmp/announce_speech_$$.tmp"
     WIN_WAV=""
     # One cleanup for every exit path; INT/TERM (e.g. a hook timeout) exit through the EXIT trap.
     trap 'rm -f "$WAV" "$WAV.pad" "$WIN_WAV" "$AFPLAY_PID_FILE"; rm -rf "$LOCK_DIR"' EXIT
     trap 'exit 130' INT TERM
-    printf '%s\n' "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --output_file "$WAV" 2>/dev/null
+    # stdout too: piper prints the output path, which is noise next to the "Announcing" line.
+    printf '%s\n' "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --length_scale "$LENGTH_SCALE" --output_file "$WAV" >/dev/null 2>&1
     if [[ "$OSTYPE" == "darwin"* ]]; then
         afplay "$WAV" 2>/dev/null &
         _afplay_pid=$!
@@ -171,9 +189,11 @@ PY
             WIN_WAV="$WIN_WAV_DIR/$(basename "$WAV")"
             # Inside a single-quoted PowerShell string a ' must be doubled (e.g. C:\Users\O'Brien).
             PS_PATH="$WIN_TEMP\\$(basename "$WAV")"
+            log_play "windows"
             powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '${PS_PATH//\'/\'\'}').PlaySync()" >/dev/null 2>&1
             rm -f "$WIN_WAV"
         else
+            log_play "wslg-paplay"
             paplay "$WAV" 2>/dev/null || aplay -r "$PLAY_RATE" -f S16_LE -t wav "$WAV" 2>/dev/null
         fi
     elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then

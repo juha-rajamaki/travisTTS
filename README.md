@@ -73,6 +73,7 @@ Turn on `TRAVIS_MULTIVOICE=on` (in `~/.config/travis/travis.env` or a project's 
 | planning | `Plan` agent results | **jenny** | `TRAVIS_VOICE_PLANNING` |
 | coding | the main session (Stop hook, `claude-announce.sh`) | **ryan** | `TRAVIS_VOICE_CODING` |
 | security | security-audit agent results (any agent type containing "security") | **alan** | `TRAVIS_VOICE_SECURITY` |
+| deploy | web deploys and app publishes, via `TRAVIS_ROLE=deploy claude-announce.sh "..."` (get the model with `voicemodels.sh --download joe`) | **joe** | `TRAVIS_VOICE_DEPLOY` |
 
 Subagents only speak when a `SubagentStop` hook runs `stop-hook.sh` for them; the role is read from the agent type, so no voice goes in the hook:
 
@@ -82,7 +83,7 @@ Subagents only speak when a `SubagentStop` hook runs `stop-hook.sh` for them; th
 ]
 ```
 
-`claude-announce.sh` speaks as coding; give it another role with `TRAVIS_ROLE=planning|security`. A `TRAVIS_VOICE=<name>` set on a hook command or in the shell still wins over the role's voice. With multivoice off, everything speaks in `TRAVIS_VOICE`. The travisTTS repo itself ships this setup in its `.claude/settings.json`.
+`claude-announce.sh` speaks as coding; give it another role with `TRAVIS_ROLE=planning|security|deploy`. A `TRAVIS_VOICE=<name>` set on a hook command or in the shell still wins over the role's voice. With multivoice off, everything speaks in `TRAVIS_VOICE`. The travisTTS repo itself ships this setup in its `.claude/settings.json`.
 
 ---
 
@@ -108,7 +109,7 @@ TRAVIS_START_WORK=on      # Say "On it." when Claude starts working
 TRAVIS_NAG=on             # Repeat reminders while Claude is idle
 TRAVIS_ANNOUNCE=on        # Manual claude-announce.sh calls
 
-# Voice: ryan (default) | amy | alan | jenny | kristin
+# Voice: ryan (default) | amy | alan | jenny | kristin | joe
 TRAVIS_VOICE=ryan
 
 # How many characters of the Stop hook message to speak
@@ -135,6 +136,7 @@ Run `voicemodels.sh` to hear each voice before choosing:
 | 3 | alan | `en_GB-alan-medium.onnx` | UK English male |
 | 4 | jenny | `en_GB-jenny_dioco-medium.onnx` | UK English female |
 | 5 | kristin | `en_US-kristin-medium.onnx` | US English female |
+| 6 | joe | `en_US-joe-medium.onnx` | US English male — the deploy voice in multivoice |
 
 Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.claude/travis.env`.
 
@@ -159,7 +161,7 @@ Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.cl
 ### `testvoice.sh [single|multi]`
 Checks that each role is spoken in the right voice by running the real hooks from `.claude/settings.json` with simulated hook events. Each clip also says which voice should be speaking, so you can confirm by ear. With no argument the mode follows `TRAVIS_MULTIVOICE`.
 - `single` — every role (planning, coding, security) is spoken by the Stop hook in the default voice (ryan)
-- `multi` — planning → jenny, coding → ryan, security → alan (or the `TRAVIS_VOICE_*` overrides)
+- `multi` — planning → jenny, coding → ryan, security → alan, deploy → joe (or the `TRAVIS_VOICE_*` overrides)
 
 Exits non-zero if any role is spoken in the wrong voice or has no hook.
 
@@ -167,7 +169,7 @@ Exits non-zero if any role is spoken in the wrong voice or has no hook.
 Plays a sample sentence in each installed voice. Run once to pick your preferred voice.
 
 ### `travis [voice_number] "message"`
-Speaks a message. Voice number: 1=ryan, 2=amy, 3=alan, 4=jenny, 5=kristin.
+Speaks a message. Voice number: 1=ryan, 2=amy, 3=alan, 4=jenny, 5=kristin, 6=joe.
 
 ### `announce.sh "message" [voice]`
 Low-level wrapper: speaker lock (no overlapping audio), tmp WAV, full fallback chain (Piper → espeak → say). Used internally by all other scripts.
