@@ -15,20 +15,26 @@ HF_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/main"
 VOICE_ENTRIES=(
     "ryan:en_US-ryan-high.onnx:en/en_US/ryan/high"
     "amy:en_US-amy-medium.onnx:en/en_US/amy/medium"
+    "joe:en_US-joe-medium.onnx:en/en_US/joe/medium"
+    "kristin:en_US-kristin-medium.onnx:en/en_US/kristin/medium"
     "alan:en_GB-alan-medium.onnx:en/en_GB/alan/medium"
     "jenny:en_GB-jenny_dioco-medium.onnx:en/en_GB/jenny_dioco/medium"
     "kristin:en_US-kristin-medium.onnx:en/en_US/kristin/medium"
     "joe:en_US-joe-medium.onnx:en/en_US/joe/medium"
+    "cori:en_GB-cori-high.onnx:en/en_GB/cori/high"
+    "alba:en_GB-alba-medium.onnx:en/en_GB/alba/medium"
 )
 
 voice_intro() {
     case "$1" in
-        ryan)    echo "Hi, I'm Ryan — your default voice. I announce when Claude finishes a task and say on it when work begins." ;;
-        amy)     echo "Hi, I'm Amy. I speak up when the Plan agent has finished laying out an implementation plan for you." ;;
-        alan)    echo "Hello, I'm Alan. I report the findings whenever the security auditor has reviewed your code." ;;
-        jenny)   echo "Hi, I'm Jenny. I can be your Travis voice." ;;
-        kristin) echo "Hi, I'm Kristin. I can be your Travis voice." ;;
-        joe)     echo "Hi, I'm Joe. I announce deployments and publishes." ;;
+        ryan)    echo "Hi, I'm Ryan. I'm the coding voice — I speak up when Claude finishes a coding task." ;;
+        amy)     echo "Hi, I'm Amy. I'm available as a voice for your Travis announcements." ;;
+        alan)    echo "Hello, I'm Alan. I'm the security voice — I report findings when the security auditor has reviewed your code." ;;
+        cori)    echo "Hello, I'm Cori. I'm available as a voice for your Travis announcements." ;;
+        joe)     echo "Hi, I'm Joe. I'm the deployment voice — I announce when your code has been deployed or published." ;;
+        kristin) echo "Hi, I'm Kristin. I'm available as a voice for your Travis announcements." ;;
+        jenny)   echo "Hi, I'm Jenny. I'm the planning voice — I announce when a plan is ready for you to review." ;;
+        alba)    echo "Hello, I'm Alba. I'm available as a voice for your Travis announcements." ;;
         *)       echo "Hello, I am $1. I can be your Travis voice." ;;
     esac
 }
@@ -110,7 +116,7 @@ if [ "$1" = "--download" ]; then
         done
         if [ "$found" -eq 0 ]; then
             echo "Unknown voice: $target"
-            echo "Available: ryan, amy, alan, jenny, kristin, joe"
+            echo "Available: ryan, amy, alan, jenny, kristin, joe, cori, alba"
             exit 1
         fi
     fi

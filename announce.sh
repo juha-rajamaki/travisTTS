@@ -16,14 +16,28 @@ source "$SCRIPT_DIR/travis-config.sh"
 VOICE="${2:-${TRAVIS_VOICE:-ryan}}"
 
 
+if [ -n "${TRAVIS_ACTIVE_FROM:-}${TRAVIS_ACTIVE_TO:-}" ] && ! travis_active_hours_set; then
+    echo "Warning: active hours ignored, need valid HH:MM for both TRAVIS_ACTIVE_FROM and TRAVIS_ACTIVE_TO" >&2
+fi
+if ! travis_is_active; then
+    echo "Outside active hours (${TRAVIS_ACTIVE_FROM}–${TRAVIS_ACTIVE_TO}): $MESSAGE"
+    exit 0
+fi
+
 # Available voices (model files live in ~/.local/share/piper/voices/):
-#   ryan    - en_US-ryan-high.onnx    (default)
-#   amy     - en_US-amy-medium.onnx
-#   alan    - en_GB-alan-medium.onnx
-#   jenny   - en_GB-jenny_dioco-medium.onnx
-#   kristin - en_US-kristin-medium.onnx
-#   joe     - en_US-joe-medium.onnx
-#   samuel  - alias for ryan (back-compat)
+#   ryan       - en_US-ryan-high.onnx    (default)
+#   amy        - en_US-amy-medium.onnx
+#   lessac     - en_US-lessac-medium.onnx
+#   bryce      - en_US-bryce-medium.onnx
+#   joe        - en_US-joe-medium.onnx
+#   john       - en_US-john-medium.onnx
+#   hfc_female - en_US-hfc_female-medium.onnx
+#   kristin    - en_US-kristin-medium.onnx
+#   alan       - en_GB-alan-medium.onnx
+#   jenny      - en_GB-jenny_dioco-medium.onnx
+#   cori       - en_GB-cori-high.onnx
+#   alba       - en_GB-alba-medium.onnx
+#   samuel     - alias for ryan (back-compat)
 
 VOICE_DIR="${HOME}/.local/share/piper/voices"
 PLAY_RATE="22050"
@@ -40,6 +54,26 @@ case "$VOICE" in
         MODEL_FILE="$VOICE_DIR/en_US-amy-medium.onnx"
         VOICE_NAME="amy"
         ;;
+    "lessac")
+        MODEL_FILE="$VOICE_DIR/en_US-lessac-medium.onnx"
+        VOICE_NAME="lessac"
+        ;;
+    "bryce")
+        MODEL_FILE="$VOICE_DIR/en_US-bryce-medium.onnx"
+        VOICE_NAME="bryce"
+        ;;
+    "6"|"joe")
+        MODEL_FILE="$VOICE_DIR/en_US-joe-medium.onnx"
+        VOICE_NAME="joe"
+        ;;
+    "john")
+        MODEL_FILE="$VOICE_DIR/en_US-john-medium.onnx"
+        VOICE_NAME="john"
+        ;;
+    "hfc_female")
+        MODEL_FILE="$VOICE_DIR/en_US-hfc_female-medium.onnx"
+        VOICE_NAME="hfc_female"
+        ;;
     "3"|"alan")
         MODEL_FILE="$VOICE_DIR/en_GB-alan-medium.onnx"
         VOICE_NAME="alan"
@@ -48,13 +82,17 @@ case "$VOICE" in
         MODEL_FILE="$VOICE_DIR/en_GB-jenny_dioco-medium.onnx"
         VOICE_NAME="jenny"
         ;;
+    "cori")
+        MODEL_FILE="$VOICE_DIR/en_GB-cori-high.onnx"
+        VOICE_NAME="cori"
+        ;;
+    "alba")
+        MODEL_FILE="$VOICE_DIR/en_GB-alba-medium.onnx"
+        VOICE_NAME="alba"
+        ;;
     "5"|"kristin")
         MODEL_FILE="$VOICE_DIR/en_US-kristin-medium.onnx"
         VOICE_NAME="kristin"
-        ;;
-    "6"|"joe")
-        MODEL_FILE="$VOICE_DIR/en_US-joe-medium.onnx"
-        VOICE_NAME="joe"
         ;;
     *)
         MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
@@ -90,6 +128,12 @@ if [ -f "$AFPLAY_PID_FILE" ]; then
     _old_pid="$(cat "$AFPLAY_PID_FILE" 2>/dev/null)"
     [ -n "$_old_pid" ] && kill "$_old_pid" 2>/dev/null
     rm -f "$AFPLAY_PID_FILE"
+fi
+
+# Older versions used a flock file at the same path; a leftover plain file would make
+# mkdir fail forever, so remove it (only if it's ours and not a directory or symlink).
+if [ -e "$LOCK_DIR" ] && [ ! -d "$LOCK_DIR" ] && [ ! -L "$LOCK_DIR" ] && [ -O "$LOCK_DIR" ]; then
+    rm -f "$LOCK_DIR"
 fi
 
 # Acquire mkdir lock (works on macOS + Linux, no flock needed).

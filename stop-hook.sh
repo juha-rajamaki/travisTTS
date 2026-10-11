@@ -60,8 +60,12 @@ except Exception:
     pass
 " 2>/dev/null)"
 
+# Voice: one set on the hook command > TRAVIS_STOP_VOICE (main session only) > the role's voice
+# (multivoice) > the default.
+ROLE="$(travis_role "$AGENT_TYPE")"
 VOICE="$CALLER_VOICE"
-[ -z "$VOICE" ] && VOICE="$(travis_role_voice "$(travis_role "$AGENT_TYPE")")"
+[ -z "$VOICE" ] && [ "$ROLE" = "coding" ] && VOICE="${TRAVIS_STOP_VOICE:-}"
+[ -z "$VOICE" ] && VOICE="$(travis_role_voice "$ROLE")"
 
 if [ -n "$VOICE" ]; then
     "$SCRIPT_DIR/announce.sh" "$MSG" "$VOICE" </dev/null

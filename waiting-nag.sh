@@ -38,7 +38,7 @@ STATE_FILE="$SCRIPT_DIR/.waiting-nag-enabled"
 START_FILE="$SCRIPT_DIR/.waiting-nag.started"
 LOG_FILE="${CLAUDE_NAG_LOG:-$SCRIPT_DIR/.waiting-nag.log}"
 LOG_MAX_BYTES="${CLAUDE_NAG_LOG_MAX:-262144}"
-VOICE=""  # resolved by announce.sh from TRAVIS_VOICE config
+VOICE="${TRAVIS_NAG_VOICE:-}"  # per-hook voice override; falls back to TRAVIS_VOICE in announce.sh
 if [ -n "$CLAUDE_NAG_INTERVAL" ]; then
     NAG_INTERVALS="$CLAUDE_NAG_INTERVAL"
 else
@@ -137,7 +137,7 @@ case "$1" in
                 logev "off" "switched off mid-wait, $spoken reminder(s) spoken"
                 break
             fi
-            out="$("$SCRIPT_DIR/announce.sh" "$MSG" 2>&1)"
+            out="$("$SCRIPT_DIR/announce.sh" "$MSG" "$VOICE" 2>&1)"
             rc=$?
             spoken=$(( spoken + 1 ))
             heard="$(printf '%s' "$out" | sed -n 's/.*Announcing (\([^)]*\)).*/\1/p' | head -1)"

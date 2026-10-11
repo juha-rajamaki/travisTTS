@@ -10,7 +10,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-VOICE_NAMES=(ryan amy alan jenny kristin joe)
+VOICE_NAMES=(ryan amy alan jenny kristin joe cori alba)
 
 # shellcheck source=travis-config.sh
 source "$SCRIPT_DIR/travis-config.sh"
@@ -52,6 +52,8 @@ voice_installed() {
         jenny)   model_ok "$VOICE_DIR/en_GB-jenny_dioco-medium.onnx" ;;
         kristin) model_ok "$VOICE_DIR/en_US-kristin-medium.onnx" ;;
         joe)     model_ok "$VOICE_DIR/en_US-joe-medium.onnx" ;;
+        cori)    model_ok "$VOICE_DIR/en_GB-cori-high.onnx" ;;
+        alba)    model_ok "$VOICE_DIR/en_GB-alba-medium.onnx" ;;
         *)       false ;;
     esac
 }

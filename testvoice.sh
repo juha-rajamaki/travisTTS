@@ -103,9 +103,9 @@ for entry in "${ROLES[@]}"; do
     # Say which voice SHOULD be speaking, so a wrong voice is audible, not just printed.
     message="$message This should be $expected speaking."
     json="$(python3 -c 'import json,sys; print(json.dumps({"hook_event_name": sys.argv[1], "agent_type": sys.argv[2], "last_assistant_message": sys.argv[3]}))' "$event" "$agent" "$message")"
-    # Force speech on for the test: DND and the Stop-hook switch would otherwise silence it.
+    # Force speech on for the test: DND, active hours and the Stop-hook switch would otherwise silence it.
     multivoice=off; [ "$MODE" = "multi" ] && multivoice=on
-    out="$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$SCRIPT_DIR" TRAVIS_QUIET_FROM= TRAVIS_QUIET_TO= TRAVIS_STOP_HOOK=on TRAVIS_MULTIVOICE="$multivoice" bash -c "$cmd" 2>&1)"
+    out="$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$SCRIPT_DIR" TRAVIS_QUIET_FROM= TRAVIS_QUIET_TO= TRAVIS_ACTIVE_FROM= TRAVIS_ACTIVE_TO= TRAVIS_STOP_HOOK=on TRAVIS_MULTIVOICE="$multivoice" bash -c "$cmd" 2>&1)"
     heard="$(printf '%s' "$out" | sed -n 's/.*Announcing (\([^)]*\)).*/\1/p' | head -1)"
 
     if [ "$heard" = "$expected" ]; then
