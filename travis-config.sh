@@ -109,6 +109,11 @@ _travis_load_config() {
     done
     [ -f "$project_env" ] && _travis_read_env "$project_env"
 
+    # 2b. Timed mute override — loaded after project config so it always wins over both.
+    #     Written by mute.sh; removed automatically when the mute expires.
+    local mute_env="$HOME/.config/travis/mute.env"
+    [ -f "$mute_env" ] && _travis_read_env "$mute_env"
+
     # 3. Restore caller-set vars so they always win over file config
     [ -n "$_snap_STOP_HOOK"  ] && eval "$_snap_STOP_HOOK"
     [ -n "$_snap_START_WORK" ] && eval "$_snap_START_WORK"
