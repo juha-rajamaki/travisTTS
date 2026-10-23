@@ -6,7 +6,7 @@
 #   1. Built-in defaults (below)
 #   2. ~/.config/travis/travis.env   — global user config
 #   3. <project>/.claude/travis.env  — per-project overrides
-#      (project root = first ancestor of $CWD that has a .claude/ dir)
+#      (project root = first ancestor of $CLAUDE_PROJECT_DIR / $CWD that has a .claude/ dir)
 #   4. Environment variables already set by the caller (highest priority)
 #
 # Available variables:
@@ -40,10 +40,10 @@ _travis_snapshot() {
     fi
 }
 
-# Read a travis.env file WITHOUT executing it. The project lookup walks up from $CWD, so a
+# Read a travis.env file WITHOUT executing it. The project lookup walks up from $CLAUDE_PROJECT_DIR, so a
 # travis.env can come from any cloned repo; sourcing it would run that repo's shell code on
 # every hook. Only known keys with plain values are accepted, everything else is ignored.
-_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_VOICE|TRAVIS_NAG_VOICE|TRAVIS_START_VOICE|TRAVIS_DEPLOY_VOICE|TRAVIS_MULTIVOICE|TRAVIS_VOICE_PLANNING|TRAVIS_VOICE_CODING|TRAVIS_VOICE_SECURITY|TRAVIS_VOICE_DEPLOY|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO|TRAVIS_ACTIVE_FROM|TRAVIS_ACTIVE_TO'
+_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_VOICE|TRAVIS_NAG_VOICE|TRAVIS_START_VOICE|TRAVIS_DEPLOY_VOICE|TRAVIS_MULTIVOICE|TRAVIS_VOICE_PLANNING|TRAVIS_VOICE_CODING|TRAVIS_VOICE_SECURITY|TRAVIS_VOICE_DEPLOY|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO|TRAVIS_ACTIVE_FROM|TRAVIS_ACTIVE_TO|TRAVIS_LENGTH_SCALE|TRAVIS_SAY_RATE'
 _TRAVIS_LINE_RE="^[[:space:]]*(export[[:space:]]+)?($_TRAVIS_KEYS)=(.*)\$"
 _TRAVIS_DQ_RE='^"([^"]*)"'
 _TRAVIS_SQ_RE="^'([^']*)'"
@@ -94,8 +94,9 @@ _travis_load_config() {
     local global_env="$HOME/.config/travis/travis.env"
     [ -f "$global_env" ] && _travis_read_env "$global_env"
 
-    # 2. Per-project config: walk up from CWD to find .claude/travis.env
-    local dir="${CWD:-$(pwd)}"
+    # 2. Per-project config: walk up from CLAUDE_PROJECT_DIR (set by Claude Code hooks)
+    #    or CWD (legacy/manual) or pwd as last resort.
+    local dir="${CLAUDE_PROJECT_DIR:-${CWD:-$(pwd)}}"
     local project_env=""
     while true; do
         if [ -f "$dir/.claude/travis.env" ]; then

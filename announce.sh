@@ -41,7 +41,7 @@ fi
 
 VOICE_DIR="${HOME}/.local/share/piper/voices"
 PLAY_RATE="22050"
-LENGTH_SCALE="1"   # piper's speaking pace: above 1 is slower
+LENGTH_SCALE="${TRAVIS_LENGTH_SCALE:-1}"   # piper's speaking pace: above 1 is slower
 
 case "$VOICE" in
     "1"|"ryan"|"samuel"|"sam")
@@ -93,6 +93,20 @@ case "$VOICE" in
     "5"|"kristin")
         MODEL_FILE="$VOICE_DIR/en_US-kristin-medium.onnx"
         VOICE_NAME="kristin"
+        ;;
+    "satu")
+        # macOS built-in Finnish voice — bypass Piper entirely
+        VOICE_NAME="satu"
+        if travis_is_quiet; then
+            echo "DND (${TRAVIS_QUIET_FROM}–${TRAVIS_QUIET_TO}) [satu]: $MESSAGE"
+            exit 0
+        fi
+        echo "Announcing [satu]: $MESSAGE"
+        _say_rate_args=""
+        [ -n "${TRAVIS_SAY_RATE:-}" ] && _say_rate_args="-r ${TRAVIS_SAY_RATE}"
+        # shellcheck disable=SC2086
+        printf '%s\n' "$MESSAGE" | say -v Satu $_say_rate_args -f -
+        exit 0
         ;;
     *)
         MODEL_FILE="$VOICE_DIR/en_US-ryan-high.onnx"
@@ -254,7 +268,10 @@ elif command -v espeak >/dev/null 2>&1; then
     printf '%s\n' "$MESSAGE" | espeak --stdin -s 140 -v en-us
 elif command -v say >/dev/null 2>&1; then
     echo "Announcing (say fallback): $MESSAGE"
-    printf '%s\n' "$MESSAGE" | say -f -
+    _say_rate_args=""
+    [ -n "${TRAVIS_SAY_RATE:-}" ] && _say_rate_args="-r ${TRAVIS_SAY_RATE}"
+    # shellcheck disable=SC2086
+    printf '%s\n' "$MESSAGE" | say $_say_rate_args -f -
 else
     echo "TTS: $MESSAGE"
 fi
