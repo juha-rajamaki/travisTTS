@@ -219,6 +219,18 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     # stdout too: piper prints the output path, which is noise next to the "Announcing" line.
     printf '%s\n' "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --length_scale "$LENGTH_SCALE" --output_file "$WAV" >/dev/null 2>&1
     if [[ "$OSTYPE" == "darwin"* ]]; then
+        # Prepend 300 ms of silence so Bluetooth/wireless audio devices have time to wake up
+        # and don't swallow the first syllable. Same fix as the WSL path above.
+        python3 - "$WAV" "$WAV.pad" <<'PY' 2>/dev/null && mv -f "$WAV.pad" "$WAV"
+import sys, wave
+src, dst = sys.argv[1], sys.argv[2]
+with wave.open(src, 'rb') as r:
+    params, frames = r.getparams(), r.readframes(r.getnframes())
+pad = b'\0' * int(params.framerate * 0.3) * params.sampwidth * params.nchannels
+with wave.open(dst, 'wb') as w:
+    w.setparams(params)
+    w.writeframes(pad + frames)
+PY
         afplay "$WAV" 2>/dev/null &
         _afplay_pid=$!
         echo "$_afplay_pid" > "$AFPLAY_PID_FILE"
