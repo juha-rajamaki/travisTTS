@@ -88,6 +88,24 @@ Subagents only speak when a `SubagentStop` hook runs `stop-hook.sh` for them; th
 
 ---
 
+### A new voice introduces itself
+
+Change the voice (`TRAVIS_VOICE`, or a role's voice with multivoice on) and the next
+announcement starts with the new voice saying who it is: "Hi, I'm Joe, your new Travis voice."
+The voice each project, and each role, last spoke in is remembered in
+`~/.config/travis/voices`; a one-off voice passed on the command line (`travis 3 "..."`) does
+not count.
+
+If the chosen voice is not installed, Travis downloads it first with
+`voicemodels.sh --download <name>` and the message waits for it (up to 45 seconds), so it is
+spoken in the voice you chose. If the download is slower or fails, another installed voice stands
+in for that message, the download finishes on its own, and a failed try is not repeated for 30
+minutes.
+If Piper itself is missing, the robotic espeak voice is used and Travis prints that
+`install.sh` will fix it.
+
+---
+
 ## Per-project configuration
 
 Drop a `travis.env` file in your project's `.claude/` directory to override settings for that project. Copy from the template:

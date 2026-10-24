@@ -126,6 +126,28 @@ if travis_is_quiet; then
     exit 0
 fi
 
+# ── A chosen voice that is not installed is downloaded first ─────────────────
+# Travis speaks in the voice that was chosen, not a stand-in: a missing model is fetched now
+# (voicemodels.sh: temp file, size check) and this message waits for it - for up to 45 seconds,
+# before taking the speaker, so other announcements are never held up. If it is not there in
+# time, or fails, another installed voice speaks this once (below); a failed or unfinished try is
+# not repeated for 30 minutes, so an offline machine is not slowed down on every message.
+_fell_back=0
+if [ ! -s "$MODEL_FILE" ] && [ -n "${MODEL_FILE:-}" ] && grep -q "\"$VOICE_NAME:" "$SCRIPT_DIR/voicemodels.sh" 2>/dev/null; then
+    _tried="$HOME/.config/travis/download-tried-$VOICE_NAME"
+    if [ -z "$(find "$_tried" -mmin -30 2>/dev/null)" ]; then
+        mkdir -p "$(dirname "$_tried")" 2>/dev/null && touch "$_tried"
+        echo "Voice '$VOICE_NAME' is not installed yet: downloading it first..."
+        "$SCRIPT_DIR/voicemodels.sh" --download "$VOICE_NAME" </dev/null >/dev/null 2>&1 &
+        _dl_pid=$!
+        _dl_deadline=$(( $(date +%s) + 45 ))
+        while kill -0 "$_dl_pid" 2>/dev/null && [ "$(date +%s)" -lt "$_dl_deadline" ]; do sleep 0.5; done
+        # still going: let it finish on its own (the next message gets the voice), but do not wait
+        if [ -s "$MODEL_FILE" ]; then echo "Voice '$VOICE_NAME' installed."; rm -f "$_tried"
+        else echo "Voice '$VOICE_NAME' is not ready yet: speaking in another voice this time." >&2; fi
+    fi
+fi
+
 # ── One voice at a time ──────────────────────────────────────────────────────
 # Announcements can overlap (nag fires on its own timer). Two at once COLLIDE —
 # Travis cuts himself off mid-sentence.
@@ -192,21 +214,42 @@ else
     [ -x "$PIPER_BIN" ] || PIPER_BIN=""
 fi
 
+[ -s "$MODEL_FILE" ] || _fell_back=1
+
 # ── Fallback: first usable model present ────────────────────────────────────
 if [ ! -s "$MODEL_FILE" ]; then
     for candidate in "$VOICE_DIR/en_US-ryan-medium.onnx" "$VOICE_DIR/samuel.onnx" "$VOICE_DIR"/*.onnx; do
         [ -f "$candidate" ] && [ -f "$candidate.json" ] || continue
         [ "$(stat -f%z "$candidate" 2>/dev/null || stat -c%s "$candidate" 2>/dev/null || echo 0)" -gt 1000000 ] || continue
         MODEL_FILE="$candidate"
-        VOICE_NAME="$(basename "$candidate" .onnx)"
+        VOICE_NAME="$(basename "$candidate" .onnx | sed -E 's/^[a-z]{2}_[A-Z]{2}-//; s/-(x_low|low|medium|high)$//; s/_dioco$//')"
         break
     done
 fi
+[ "$_fell_back" = 1 ] && SPEAKER="$VOICE_NAME, standing in"   # printed with the speech
 
 # One line per announcement: which player spoke it. Rarely a line plays at several times normal
 # speed; the log tells whether those went through Windows or the Linux (WSLg) fallback.
 PLAY_LOG="$SCRIPT_DIR/.announce.log"
 log_play() { printf '%s  %-8s %-11s %s\n' "$(date '+%F %T')" "$VOICE_NAME" "$1" "${MESSAGE:0:60}" >> "$PLAY_LOG" 2>/dev/null; }
+
+# ── A new voice introduces itself ────────────────────────────────────────────
+# The voice each project (and, with multivoice, each role) last spoke in is remembered in
+# ~/.config/travis/voices. When it has changed - or speaks there for the first time - the new
+# voice says who it is before the message. A one-off voice passed as $2 (`travis 3 "..."`, the
+# voicemodels.sh demo) is not a change. Read and written while holding the speaker lock.
+if [ -z "${2:-}" ] && [ "$_fell_back" = 0 ] && [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then   # a stand-in, or no Piper, does not count
+    _voices_file="$HOME/.config/travis/voices"
+    _voice_key="${TRAVIS_PROJECT_ROOT:-global}|${_role:-all}"
+    _voice_key="${_voice_key//$'\t'/ }"; _voice_key="${_voice_key//$'\n'/ }"   # one line, one tab per entry
+    _last_voice="$(TRAVIS_K="$_voice_key" awk -F'\t' '$1 == ENVIRON["TRAVIS_K"] { v = $2 } END { print v }' "$_voices_file" 2>/dev/null)"
+    if [ "$_last_voice" != "$VOICE_NAME" ]; then
+        MESSAGE="$(travis_voice_intro "$VOICE_NAME" "$_role") $MESSAGE"
+        mkdir -p "$(dirname "$_voices_file")" 2>/dev/null
+        { TRAVIS_K="$_voice_key" awk -F'\t' '$1 != ENVIRON["TRAVIS_K"]' "$_voices_file" 2>/dev/null; printf '%s\t%s\n' "$_voice_key" "$VOICE_NAME"; } \
+            > "$_voices_file.tmp" 2>/dev/null && mv -f "$_voices_file.tmp" "$_voices_file"
+    fi
+fi
 
 # ── Speak ────────────────────────────────────────────────────────────────────
 if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
@@ -275,6 +318,8 @@ PY
     fi
     rm -f "$WAV"
 elif command -v espeak >/dev/null 2>&1; then
+    # Not Travis's real voice: Piper (or every voice model) is missing. Say so, and how to fix it.
+    echo "Piper TTS or its voice models are missing, so this is the robotic espeak voice. Run $SCRIPT_DIR/install.sh to fix it." >&2
     echo "Announcing (espeak fallback): $MESSAGE"
     # Text on stdin, never argv: a message like "-w/some/file" would be parsed as an option.
     printf '%s\n' "$MESSAGE" | espeak --stdin -s 140 -v en-us

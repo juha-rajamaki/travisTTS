@@ -109,6 +109,9 @@ _travis_load_config() {
         dir="$parent"
     done
     [ -f "$project_env" ] && _travis_read_env "$project_env"
+    # The project this config belongs to (empty outside one): a voice is remembered per project.
+    TRAVIS_PROJECT_ROOT=""
+    [ -n "$project_env" ] && TRAVIS_PROJECT_ROOT="$(dirname "$(dirname "$project_env")")"
 
     # 2b. Timed mute override — loaded after project config so it always wins over both.
     #     Written by mute.sh; removed automatically when the mute expires.
@@ -172,6 +175,22 @@ travis_voice_role() {
     for role in planning coding security deploy; do
         [ "$(travis_role_voice "$role")" = "$1" ] && { echo "$role"; return 0; }
     done
+}
+
+# travis_voice_intro <voice> [role] — what a voice says the first time it speaks after a change:
+# its name, and its job when it speaks for one role (multivoice).
+travis_voice_intro() {
+    local name hello="Hi"
+    name="$(printf '%s' "$1" | tr '_' ' ')"
+    name="$(printf '%s' "${name:0:1}" | tr '[:lower:]' '[:upper:]')${name:1}"
+    case "$1" in alan|cori|alba) hello="Hello" ;; esac
+    case "$2" in
+        planning) echo "$hello, I'm $name, your new planning voice. I'll tell you when a plan is ready for you to review." ;;
+        coding)   echo "$hello, I'm $name, your new coding voice. I'll speak up when Claude finishes a task." ;;
+        security) echo "$hello, I'm $name, your new security voice. I'll report what the security auditor finds." ;;
+        deploy)   echo "$hello, I'm $name, your new deployment voice. I'll tell you when your code is deployed or published." ;;
+        *)        echo "$hello, I'm $name, your new Travis voice. I'll be the one speaking from now on." ;;
+    esac
 }
 
 # _travis_hhmm <HH:MM> — prints minutes since midnight, or fails if not a valid 24h time.
