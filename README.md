@@ -45,7 +45,8 @@ Add these hooks to `~/.claude/settings.json` (global — works in every project 
     "UserPromptSubmit": [
       { "matcher": "", "hooks": [
         { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" },
-        { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh arm" }
+        { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh arm" },
+        { "type": "command", "command": "$HOME/tools/travisTTS/speak-hook.sh" }
       ]}
     ],
     "PreToolUse": [
@@ -158,7 +159,7 @@ Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.cl
 
 | Hook | Script | What happens |
 |------|--------|-------------|
-| `UserPromptSubmit` | `waiting-nag.sh stop` + `start-work.sh arm` | Silence nagger; arm the "On it." trigger |
+| `UserPromptSubmit` | `waiting-nag.sh stop` + `start-work.sh arm` + `speak-hook.sh` | Silence nagger; arm the "On it." trigger; speak a `speak with travis …` prompt |
 | `PreToolUse` (first) | `start-work.sh fire` | Says **"On it."** once, then disarms |
 | `PreToolUse` (rest) | `waiting-nag.sh stop` | Keeps nagger silenced while Claude works |
 | `PostToolUse` | `waiting-nag.sh stop` | Keeps nagger silenced |
@@ -188,6 +189,13 @@ Low-level wrapper: speaker lock (no overlapping audio), tmp WAV, full fallback c
 
 ### `stop-hook.sh`
 Wired as the `Stop` hook. Reads `last_assistant_message` from hook JSON, strips markdown, trims to `TRAVIS_STOP_MAX_CHARS` chars (default 300), speaks it. Falls back to "Done." if message is empty. Disable with `TRAVIS_STOP_HOOK=off` in travis.env.
+
+### `speak-hook.sh`
+Wired as a `UserPromptSubmit` hook. Type `speak with travis <text>` in a Claude session and Travis speaks `<text>`. The prompt is blocked, so Claude never sees it or answers it. Prompts that don't start with "speak with travis" go through unchanged. Voice, mute, DND and active hours still apply.
+
+```
+speak with travis: the build is green, go get coffee
+```
 
 ### `start-work.sh arm | fire | status`
 "On it." announcer. `arm` on `UserPromptSubmit`, `fire` on `PreToolUse` — speaks once then disarms. Disable with `TRAVIS_START_WORK=off`.

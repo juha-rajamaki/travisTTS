@@ -230,7 +230,7 @@ echo "  1. Wire up Claude Code hooks — add to ~/.claude/settings.json (global,
 echo ""
 echo '     "hooks": {'
 echo '       "Notification":     [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh start" }] }],'
-echo '       "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }, { "type": "command", "command": "'"$INSTALL_DIR"'/start-work.sh arm" }] }],'
+echo '       "UserPromptSubmit": [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }, { "type": "command", "command": "'"$INSTALL_DIR"'/start-work.sh arm" }, { "type": "command", "command": "'"$INSTALL_DIR"'/speak-hook.sh" }] }],'
 echo '       "PreToolUse":       [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }, { "type": "command", "command": "'"$INSTALL_DIR"'/start-work.sh fire" }] }],'
 echo '       "PostToolUse":      [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/waiting-nag.sh stop" }] }],'
 echo '       "Stop":             [{ "matcher": "", "hooks": [{ "type": "command", "command": "'"$INSTALL_DIR"'/stop-hook.sh" }] }]'
