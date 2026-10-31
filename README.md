@@ -16,7 +16,7 @@ All speech uses [Piper TTS](https://github.com/rhasspy/piper) for natural-soundi
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/juha-rajamaki/travisTTS/main/install.sh)"
 ```
 
-Works on macOS, Linux, and Windows (WSL or Git Bash). Re-running on an existing install just pulls the latest.
+Works on macOS, Linux, and Windows (WSL or Git Bash). Re-running on an existing install just pulls the latest. On WSL, install `ffmpeg` too (`sudo apt install ffmpeg`): Travis converts the audio to 48 kHz stereo before Windows plays it, which stops lines that sometimes speed up partway through. Without it Travis still speaks.
 
 #### Manual install
 

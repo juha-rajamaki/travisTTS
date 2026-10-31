@@ -257,7 +257,7 @@ if [ -x "$PIPER_BIN" ] && [ -f "$MODEL_FILE" ]; then
     WAV="$(mktemp "${TMPDIR:-/tmp}/announce_speech.XXXXXX")" || WAV="/tmp/announce_speech_$$.tmp"
     WIN_WAV=""
     # One cleanup for every exit path; INT/TERM (e.g. a hook timeout) exit through the EXIT trap.
-    trap 'rm -f "$WAV" "$WAV.pad" "$WIN_WAV" "$AFPLAY_PID_FILE"; rm -rf "$LOCK_DIR"' EXIT
+    trap 'rm -f "$WAV" "$WAV.pad" "$WAV.48k" "$WIN_WAV" "$AFPLAY_PID_FILE"; rm -rf "$LOCK_DIR"' EXIT
     trap 'exit 130' INT TERM
     # stdout too: piper prints the output path, which is noise next to the "Announcing" line.
     printf '%s\n' "$MESSAGE" | "$PIPER_BIN" --model "$MODEL_FILE" --length_scale "$LENGTH_SCALE" --output_file "$WAV" >/dev/null 2>&1
@@ -296,13 +296,21 @@ with wave.open(dst, 'wb') as w:
     w.setparams(params)
     w.writeframes(pad + frames)
 PY
+        # Hand Windows 48 kHz stereo, the shared-mode mix format of most devices. Piper writes
+        # 22050 Hz mono, and the on-the-fly conversion of that sometimes speeds a line up midway.
+        if command -v ffmpeg >/dev/null 2>&1 \
+            && ffmpeg -nostdin -loglevel error -y -i "$WAV" -ar 48000 -ac 2 -f wav "$WAV.48k" 2>/dev/null; then
+            mv -f "$WAV.48k" "$WAV"; _fmt="windows-48k"
+        else
+            rm -f "$WAV.48k"; _fmt="windows"
+        fi
         WIN_TEMP="$(cmd.exe /c 'echo %TEMP%' 2>/dev/null | tr -d '\r')"
         WIN_WAV_DIR="$(wslpath -u "$WIN_TEMP" 2>/dev/null)"
         if [ -n "$WIN_TEMP" ] && [ -d "$WIN_WAV_DIR" ] && cp "$WAV" "$WIN_WAV_DIR/$(basename "$WAV")" 2>/dev/null; then
             WIN_WAV="$WIN_WAV_DIR/$(basename "$WAV")"
             # Inside a single-quoted PowerShell string a ' must be doubled (e.g. C:\Users\O'Brien).
             PS_PATH="$WIN_TEMP\\$(basename "$WAV")"
-            log_play "windows"
+            log_play "$_fmt"
             powershell.exe -NoProfile -Command "(New-Object Media.SoundPlayer '${PS_PATH//\'/\'\'}').PlaySync()" >/dev/null 2>&1
             rm -f "$WIN_WAV"
         else
