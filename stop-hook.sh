@@ -8,7 +8,7 @@
 #
 # Config (travis.env):
 #   TRAVIS_STOP_HOOK=off          disable this hook entirely
-#   TRAVIS_STOP_MAX_CHARS=N       max characters spoken (default 300)
+#   TRAVIS_STOP_MAX_CHARS=N       max characters spoken (default 300), cut at the last whole sentence
 #   TRAVIS_VOICE=ryan|amy|...     voice to use
 #   TRAVIS_MULTIVOICE=on          speak in the role's voice: the main session as coding (ryan),
 #                                 a Plan agent as planning (jenny), a security agent as security
@@ -45,7 +45,16 @@ try:
     msg = re.sub(r'\`\`\`.*?\`\`\`', '', msg, flags=re.DOTALL)
     msg = re.sub(r'[#*\`_>]', '', msg)
     msg = ' '.join(msg.split())
-    print(msg[:int(sys.argv[1])])
+    limit = int(sys.argv[1])
+    if len(msg) > limit:
+        # End on the last whole sentence that fits, not mid-word; else on the last whole word.
+        cut = msg[:limit + 1]
+        ends = [m.end() for m in re.finditer(r'[.!?](?=\s)', cut)]
+        if ends and ends[-1] >= limit // 3:
+            msg = cut[:ends[-1]]
+        else:
+            msg = cut.rsplit(' ', 1)[0].rstrip(',;:') + '.'
+    print(msg)
 except Exception:
     pass
 " "$MAX_CHARS" 2>/dev/null)"
