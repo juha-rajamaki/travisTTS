@@ -282,16 +282,21 @@ PY
     elif grep -qi microsoft /proc/version 2>/dev/null; then
         # WSL: play through Windows. SoundPlayer can't open a Linux path like /tmp/x.wav, and a
         # \\wsl.localhost UNC path returns after a fraction of a second - so copy the file onto
-        # the Windows drive first. Prepend 400 ms of silence: Windows audio devices (Bluetooth
-        # especially) wake up late and swallow the start of the first word.
+        # the Windows drive first. Prepend silence (TRAVIS_LEAD_SILENCE seconds, default 1.0):
+        # Windows audio devices (Bluetooth especially) wake up late, and then either swallow the
+        # start of the line or play it too fast to catch up. 400 ms was not always enough.
         # Padded into a side file and moved over only on success, so a failure never leaves a
         # truncated WAV behind to play.
-        python3 - "$WAV" "$WAV.pad" <<'PY' 2>/dev/null && mv -f "$WAV.pad" "$WAV"
+        python3 - "$WAV" "$WAV.pad" "${TRAVIS_LEAD_SILENCE:-1.0}" <<'PY' 2>/dev/null && mv -f "$WAV.pad" "$WAV"
 import sys, wave
 src, dst = sys.argv[1], sys.argv[2]
+try:
+    lead = min(max(float(sys.argv[3]), 0.0), 3.0)
+except ValueError:
+    lead = 1.0
 with wave.open(src, 'rb') as r:
     params, frames = r.getparams(), r.readframes(r.getnframes())
-pad = b'\0' * int(params.framerate * 0.4) * params.sampwidth * params.nchannels
+pad = b'\0' * int(params.framerate * lead) * params.sampwidth * params.nchannels
 with wave.open(dst, 'wb') as w:
     w.setparams(params)
     w.writeframes(pad + frames)
