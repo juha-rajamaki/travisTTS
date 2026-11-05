@@ -274,7 +274,7 @@ with wave.open(dst, 'wb') as w:
     w.setparams(params)
     w.writeframes(pad + frames)
 PY
-        afplay -r "${TRAVIS_PLAY_RATE:-1.4}" "$WAV" 2>/dev/null &
+        afplay -r "${TRAVIS_PLAY_RATE:-1.2}" "$WAV" 2>/dev/null &
         _afplay_pid=$!
         echo "$_afplay_pid" > "$AFPLAY_PID_FILE"
         wait "$_afplay_pid" 2>/dev/null
