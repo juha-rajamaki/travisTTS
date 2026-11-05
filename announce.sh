@@ -41,7 +41,7 @@ fi
 
 VOICE_DIR="${HOME}/.local/share/piper/voices"
 PLAY_RATE="22050"
-LENGTH_SCALE="${TRAVIS_LENGTH_SCALE:-1}"   # piper's speaking pace: above 1 is slower
+LENGTH_SCALE="${TRAVIS_LENGTH_SCALE:-0.75}"   # piper's speaking pace: above 1 is slower, below 1 is faster
 
 case "$VOICE" in
     "1"|"ryan"|"samuel"|"sam")
