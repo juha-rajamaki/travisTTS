@@ -8,6 +8,7 @@
 #
 # Config (travis.env):
 #   TRAVIS_STOP_HOOK=off          disable this hook entirely
+#   TRAVIS_ANNOUNCE=off           also silences this hook (same as claude-announce.sh off)
 #   TRAVIS_STOP_MAX_CHARS=N       max characters spoken (default 300), cut at the last whole sentence
 #   TRAVIS_VOICE=ryan|amy|...     voice to use
 #   TRAVIS_MULTIVOICE=on          speak in the role's voice: the main session as coding (ryan),
@@ -24,6 +25,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/travis-config.sh"
 
 [ "${TRAVIS_STOP_HOOK:-on}" = "off" ] && exit 0
+
+# Also respect claude-announce.sh off — if the user muted manual announcements, the stop hook
+# should be silent too.
+_STATE_FILE="$SCRIPT_DIR/.claude-announce-enabled"
+if [ "${TRAVIS_ANNOUNCE:-on}" = "off" ] || { [ -f "$_STATE_FILE" ] && [ "$(tr -d '[:space:]' < "$_STATE_FILE")" = "off" ]; }; then
+    exit 0
+fi
 
 MAX_CHARS="${TRAVIS_STOP_MAX_CHARS:-300}"
 
@@ -60,6 +68,10 @@ except Exception:
 " "$MAX_CHARS" 2>/dev/null)"
 
 [ -z "$MSG" ] && MSG="Done."
+
+# Skip very short messages — they're usually acknowledgement one-liners (e.g. "Deployed.")
+# that fire a second time when a background task notification arrives.
+[ "${#MSG}" -lt 15 ] && exit 0
 
 AGENT_TYPE="$(printf '%s' "$HOOK_JSON" | python3 -c "
 import sys, json
