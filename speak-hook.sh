@@ -35,7 +35,6 @@ print(text[:2000])
 
 # Block the prompt; the reason is shown to the user instead of being sent to Claude.
 block() {
-    rm -f "$SCRIPT_DIR/.start-work-armed"   # no tool call follows a blocked prompt, so don't leave "On it." armed
     python3 -c 'import json, sys; print(json.dumps({"decision": "block", "reason": sys.argv[1]}))' "$1"
     exit 0
 }

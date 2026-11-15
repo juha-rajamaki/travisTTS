@@ -2,7 +2,6 @@
 
 Travis is a voice announcement system for [Claude Code](https://claude.ai/code) sessions. It gives you a running audio commentary of what Claude is doing:
 
-- **"On it."** — spoken the moment Claude starts working on your prompt
 - **Announce** — speaks Claude's response summary automatically when a task finishes (Stop hook)
 - **Nag** — repeats a reminder at set intervals while Claude is idle, waiting for your input
 
@@ -45,14 +44,12 @@ Add these hooks to `~/.claude/settings.json` (global — works in every project 
     "UserPromptSubmit": [
       { "matcher": "", "hooks": [
         { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" },
-        { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh arm" },
         { "type": "command", "command": "$HOME/tools/travisTTS/speak-hook.sh" }
       ]}
     ],
     "PreToolUse": [
       { "matcher": "", "hooks": [
-        { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" },
-        { "type": "command", "command": "$HOME/tools/travisTTS/start-work.sh fire" }
+        { "type": "command", "command": "$HOME/tools/travisTTS/waiting-nag.sh stop" }
       ]}
     ],
     "PostToolUse": [
@@ -124,7 +121,6 @@ cp ~/tools/travisTTS/travis.env.example <your-project>/.claude/travis.env
 ```bash
 # Which features are active (on|off)
 TRAVIS_STOP_HOOK=on       # Speak Claude's last message when a task finishes
-TRAVIS_START_WORK=on      # Say "On it." when Claude starts working
 TRAVIS_NAG=on             # Repeat reminders while Claude is idle
 TRAVIS_ANNOUNCE=on        # Manual claude-announce.sh calls
 
@@ -148,7 +144,7 @@ CLAUDE_NAG_INTERVALS="60 60 60 300 300 300"
 
 ### Active hours
 
-By default Travis speaks at any time. Set `TRAVIS_ACTIVE_FROM` and `TRAVIS_ACTIVE_TO` to limit speech to a window, e.g. working hours. Outside the window every announcement (Stop hook, "On it.", nagger, `travis "..."`) is skipped and only printed. Overnight windows such as `20:00`–`02:00` work, and do-not-disturb still applies inside active hours. Both values must be valid `HH:MM`; if either is missing or invalid, active hours are ignored. Equal start and end times (e.g. `09:00`–`09:00`) mean the whole day. `travis-status.sh` shows whether Travis is speaking right now.
+By default Travis speaks at any time. Set `TRAVIS_ACTIVE_FROM` and `TRAVIS_ACTIVE_TO` to limit speech to a window, e.g. working hours. Outside the window every announcement (Stop hook, nagger, `travis "..."`) is skipped and only printed. Overnight windows such as `20:00`–`02:00` work, and do-not-disturb still applies inside active hours. Both values must be valid `HH:MM`; if either is missing or invalid, active hours are ignored. Equal start and end times (e.g. `09:00`–`09:00`) mean the whole day. `travis-status.sh` shows whether Travis is speaking right now.
 
 ---
 
@@ -177,9 +173,8 @@ Set your preferred voice in `~/.config/travis/travis.env` or per-project in `.cl
 
 | Hook | Script | What happens |
 |------|--------|-------------|
-| `UserPromptSubmit` | `waiting-nag.sh stop` + `start-work.sh arm` + `speak-hook.sh` | Silence nagger; arm the "On it." trigger; speak a `speak with travis …` prompt |
-| `PreToolUse` (first) | `start-work.sh fire` | Says **"On it."** once, then disarms |
-| `PreToolUse` (rest) | `waiting-nag.sh stop` | Keeps nagger silenced while Claude works |
+| `UserPromptSubmit` | `waiting-nag.sh stop` + `speak-hook.sh` | Silence nagger; speak a `speak with travis …` prompt |
+| `PreToolUse` | `waiting-nag.sh stop` | Keeps nagger silenced while Claude works |
 | `PostToolUse` | `waiting-nag.sh stop` | Keeps nagger silenced |
 | `Notification` | `waiting-nag.sh start` | Starts the idle nagger (Claude waiting for you) |
 | `Stop` | `stop-hook.sh` | Extracts `last_assistant_message` and speaks it |
@@ -215,9 +210,6 @@ Wired as a `UserPromptSubmit` hook. Type `speak with travis <text>` in a Claude 
 speak with travis: the build is green, go get coffee
 ```
 
-### `start-work.sh arm | fire | status`
-"On it." announcer. `arm` on `UserPromptSubmit`, `fire` on `PreToolUse` — speaks once then disarms. Disable with `TRAVIS_START_WORK=off`.
-
 ### `claude-announce.sh "message" | on | off | status`
 Manual announcer. Speaks immediately and schedules two nag repeats (60 s and 180 s). The Stop hook covers this automatically — use for manual overrides. Disable with `TRAVIS_ANNOUNCE=off`.
 
@@ -239,6 +231,5 @@ Default schedule: `"60 60 60 300 300 300"` — six nags, first three ~1 min apar
 | Feature | travis.env variable | Default |
 |---------|-------------------|---------|
 | Stop hook announcement | `TRAVIS_STOP_HOOK=off` | on |
-| "On it." start announcement | `TRAVIS_START_WORK=off` | on |
 | Idle nagger | `TRAVIS_NAG=off` | on |
 | Manual announce | `TRAVIS_ANNOUNCE=off` | on |

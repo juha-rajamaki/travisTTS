@@ -69,7 +69,6 @@ active_status() {
 # We show the effective state (both sources combined).
 
 stop_hook_env="${TRAVIS_STOP_HOOK:-on}"
-start_work_env="${TRAVIS_START_WORK:-on}"
 nag_env="${TRAVIS_NAG:-on}"
 announce_env="${TRAVIS_ANNOUNCE:-on}"
 
@@ -77,7 +76,6 @@ nag_file="$(file_switch "$SCRIPT_DIR/.waiting-nag-enabled")"
 announce_file="$(file_switch "$SCRIPT_DIR/.claude-announce-enabled")"
 
 stop_hook_state="$stop_hook_env"
-start_work_state="$start_work_env"
 nag_state="$( [ "$nag_env" = "off" ] || [ "$nag_file" = "off" ] && echo "off" || echo "on" )"
 announce_state="$( [ "$announce_env" = "off" ] || [ "$announce_file" = "off" ] && echo "off" || echo "on" )"
 
@@ -106,7 +104,6 @@ printf "  %-22s %s\n" "Active hours:"   "$(active_status)"
 printf "  %-22s %s\n" "Do-not-disturb:" "$(dnd_status)"
 echo ""
 printf "  %-22s %s\n" "Stop hook:"     "$(on_off "$stop_hook_state")  (speak when Claude finishes)"
-printf "  %-22s %s\n" "Start work:"    "$(on_off "$start_work_state")  (say \"On it.\" when Claude starts)"
 printf "  %-22s %s\n" "Idle nagger:"   "$(on_off "$nag_state")  (remind you while Claude waits)"
 printf "  %-22s %s\n" "Manual announce:" "$(on_off "$announce_state")"
 echo ""

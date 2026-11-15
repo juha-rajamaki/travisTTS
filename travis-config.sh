@@ -11,13 +11,11 @@
 #
 # Available variables:
 #   TRAVIS_STOP_HOOK=on|off          Stop hook auto-announcement (default: on)
-#   TRAVIS_START_WORK=on|off         "On it." on task start (default: on)
 #   TRAVIS_NAG=on|off                Idle waiting nagger (default: on)
 #   TRAVIS_ANNOUNCE=on|off           Manual claude-announce.sh (default: on)
 #   TRAVIS_VOICE=ryan|amy|alan|jenny|kristin|joe|cori|alba|...  Default voice (default: ryan)
 #   TRAVIS_STOP_VOICE=<voice>        Override voice for Stop hook (falls back to TRAVIS_VOICE)
 #   TRAVIS_NAG_VOICE=<voice>         Override voice for waiting nagger (falls back to TRAVIS_VOICE)
-#   TRAVIS_START_VOICE=<voice>       Override voice for "On it." (falls back to TRAVIS_VOICE)
 #   TRAVIS_DEPLOY_VOICE=<voice>      Override voice for deploy/publish announcements (falls back to TRAVIS_VOICE)
 #   TRAVIS_MULTIVOICE=on|off         A voice per role (default: off):
 #   TRAVIS_VOICE_PLANNING=jenny        planning — Plan agent results
