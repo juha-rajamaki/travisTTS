@@ -41,7 +41,7 @@ _travis_snapshot() {
 # Read a travis.env file WITHOUT executing it. The project lookup walks up from $CLAUDE_PROJECT_DIR, so a
 # travis.env can come from any cloned repo; sourcing it would run that repo's shell code on
 # every hook. Only known keys with plain values are accepted, everything else is ignored.
-_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_VOICE|TRAVIS_NAG_VOICE|TRAVIS_START_VOICE|TRAVIS_DEPLOY_VOICE|TRAVIS_MULTIVOICE|TRAVIS_VOICE_PLANNING|TRAVIS_VOICE_CODING|TRAVIS_VOICE_SECURITY|TRAVIS_VOICE_DEPLOY|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO|TRAVIS_ACTIVE_FROM|TRAVIS_ACTIVE_TO|TRAVIS_LENGTH_SCALE|TRAVIS_SAY_RATE'
+_TRAVIS_KEYS='TRAVIS_STOP_HOOK|TRAVIS_START_WORK|TRAVIS_NAG|TRAVIS_ANNOUNCE|TRAVIS_VOICE|TRAVIS_STOP_VOICE|TRAVIS_NAG_VOICE|TRAVIS_START_VOICE|TRAVIS_DEPLOY_VOICE|TRAVIS_MULTIVOICE|TRAVIS_VOICE_PLANNING|TRAVIS_VOICE_CODING|TRAVIS_VOICE_SECURITY|TRAVIS_VOICE_DEPLOY|TRAVIS_STOP_MAX_CHARS|CLAUDE_NAG_INTERVALS|TRAVIS_QUIET_FROM|TRAVIS_QUIET_TO|TRAVIS_ACTIVE_FROM|TRAVIS_ACTIVE_TO|TRAVIS_LENGTH_SCALE|TRAVIS_SAY_RATE|TRAVIS_PLAY_RATE'
 _TRAVIS_LINE_RE="^[[:space:]]*(export[[:space:]]+)?($_TRAVIS_KEYS)=(.*)\$"
 _TRAVIS_DQ_RE='^"([^"]*)"'
 _TRAVIS_SQ_RE="^'([^']*)'"
@@ -87,6 +87,7 @@ _travis_load_config() {
     local _snap_QUIET_TO;   _snap_QUIET_TO="$(_travis_snapshot TRAVIS_QUIET_TO)"
     local _snap_ACTIVE_FROM; _snap_ACTIVE_FROM="$(_travis_snapshot TRAVIS_ACTIVE_FROM)"
     local _snap_ACTIVE_TO;   _snap_ACTIVE_TO="$(_travis_snapshot TRAVIS_ACTIVE_TO)"
+    local _snap_PLAY_RATE;   _snap_PLAY_RATE="$(_travis_snapshot TRAVIS_PLAY_RATE)"
 
     # 1. Global user config
     local global_env="$HOME/.config/travis/travis.env"
@@ -137,6 +138,7 @@ _travis_load_config() {
     [ -n "$_snap_QUIET_TO"   ] && eval "$_snap_QUIET_TO"
     [ -n "$_snap_ACTIVE_FROM" ] && eval "$_snap_ACTIVE_FROM"
     [ -n "$_snap_ACTIVE_TO"   ] && eval "$_snap_ACTIVE_TO"
+    [ -n "$_snap_PLAY_RATE"   ] && eval "$_snap_PLAY_RATE"
 }
 
 _travis_load_config

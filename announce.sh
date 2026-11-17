@@ -15,6 +15,10 @@ source "$SCRIPT_DIR/travis-config.sh"
 # `travis 3 "..."` or the voicemodels.sh demo is honoured.
 VOICE="${2:-${TRAVIS_VOICE:-ryan}}"
 
+# Respect the global on/off toggle — silence even when called directly (not via claude-announce.sh).
+if [ -f "$SCRIPT_DIR/.claude-announce-enabled" ] && [ "$(cat "$SCRIPT_DIR/.claude-announce-enabled")" = "off" ]; then
+    exit 0
+fi
 
 if [ -n "${TRAVIS_ACTIVE_FROM:-}${TRAVIS_ACTIVE_TO:-}" ] && ! travis_active_hours_set; then
     echo "Warning: active hours ignored, need valid HH:MM for both TRAVIS_ACTIVE_FROM and TRAVIS_ACTIVE_TO" >&2
@@ -274,7 +278,14 @@ with wave.open(dst, 'wb') as w:
     w.setparams(params)
     w.writeframes(pad + frames)
 PY
-        afplay -r "${TRAVIS_PLAY_RATE:-1.05}" "$WAV" 2>/dev/null &
+        # Convert to 48 kHz stereo before playing: Piper outputs 22050 Hz mono, and macOS's
+        # audio stack sometimes plays long files at 3x speed when the sample rate doesn't match
+        # the device's native rate. ffmpeg resampling fixes this, same as the WSL path does.
+        if command -v ffmpeg >/dev/null 2>&1 \
+            && ffmpeg -nostdin -loglevel error -y -i "$WAV" -ar 48000 -ac 2 -f wav "$WAV.48k" 2>/dev/null; then
+            mv -f "$WAV.48k" "$WAV"
+        fi
+        afplay -r "${TRAVIS_PLAY_RATE:-1.2}" "$WAV" 2>/dev/null &
         _afplay_pid=$!
         echo "$_afplay_pid" > "$AFPLAY_PID_FILE"
         wait "$_afplay_pid" 2>/dev/null
