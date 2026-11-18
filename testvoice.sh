@@ -4,7 +4,7 @@
 #
 # Runs the real hook commands from this project's .claude/settings.json with a simulated hook
 # event, so it tests the wiring (matchers, voice overrides, config) and not just announce.sh.
-# The voice is read back from announce.sh's "Announcing (<voice>)" line, which names the model
+# The voice is read back from announce.sh's "Announcing [role · voice]:" line, which names the model
 # that actually spoke, so a missing model that falls back to another voice shows up as a FAIL.
 #
 # Usage: ./testvoice.sh [single|multi]
@@ -106,7 +106,8 @@ for entry in "${ROLES[@]}"; do
     # Force speech on for the test: DND, active hours and the Stop-hook switch would otherwise silence it.
     multivoice=off; [ "$MODE" = "multi" ] && multivoice=on
     out="$(printf '%s' "$json" | CLAUDE_PROJECT_DIR="$SCRIPT_DIR" TRAVIS_QUIET_FROM= TRAVIS_QUIET_TO= TRAVIS_ACTIVE_FROM= TRAVIS_ACTIVE_TO= TRAVIS_STOP_HOOK=on TRAVIS_MULTIVOICE="$multivoice" bash -c "$cmd" 2>&1)"
-    heard="$(printf '%s' "$out" | sed -n 's/.*Announcing (\([^)]*\)).*/\1/p' | head -1)"
+    # Format: "Announcing [role · voice]:" or "Announcing [voice]:" — extract the last word before ']'
+    heard="$(printf '%s' "$out" | sed -n 's/.*Announcing \[[^]]*[· ]\([a-z_]*\)].*/\1/p; s/.*Announcing \[\([a-z_]*\)].*/\1/p' | head -1)"
 
     if [ "$heard" = "$expected" ]; then
         echo "ok    (heard $heard)"
